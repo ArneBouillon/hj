@@ -6,9 +6,10 @@ mod shared;
 use crate::api::json::JSONActor;
 use crate::rust_actors::human_actor::HumanActor;
 use crate::rust_actors::random_actor::RandomActor;
+use crate::shared::data::PassDirection;
 
 fn main() {
-    let scores = internal::game::play([
+    let scores = internal::game::play(PassDirection::None, [
         &mut HumanActor::new(),
         &mut RandomActor::new(),
         &mut RandomActor::new(),

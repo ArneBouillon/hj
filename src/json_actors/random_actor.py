@@ -64,6 +64,8 @@ while True:
         string = '[]'
     elif message['message'] == 'end_game':
         string = '[]'
+    elif message['message'] == 'get_pass':
+        raise Error()
 
     string += '\n'
     with open('temp.txt', 'w+') as file:

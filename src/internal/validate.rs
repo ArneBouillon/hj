@@ -2,8 +2,30 @@ use core::option::Option::Some;
 use core::result::Result;
 use core::result::Result::{Err, Ok};
 use crate::internal::game_state::GameState;
-use crate::shared::data::{Move, Suit};
+use crate::shared::data::{Card, Move, PassDirection, Suit};
 use crate::shared::errors::HJError;
+
+pub fn validate_pass(direction: PassDirection, passed_cards: &Vec<Card>, pidx: usize, game_state: &mut GameState) -> Result<(), HJError> {
+    match direction {
+        PassDirection::None => {
+            if !passed_cards.is_empty() {
+                return Err(HJError::InvalidCardError("No cards should be passed this round.".to_owned()))
+            }
+        },
+        _ => {
+            if passed_cards.len() != 3 {
+                return Err(HJError::InvalidCardError("Exactly three cards should be passed this round.".to_owned()))
+            }
+            for card in passed_cards {
+                if !game_state.players()[pidx].hand().any_match(*card) {
+                    return Err(HJError::InvalidCardError("Only cards from your hand can be passed.".to_owned()))
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
 
 pub fn validate_move(game_state: &GameState, played_moves: &Vec<Move>, new_move: Move) -> Result<(), HJError> {
     let Move(new_pidx, new_card) = new_move;

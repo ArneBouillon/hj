@@ -2,7 +2,15 @@ use core::clone::Clone;
 
 use num_derive::FromPrimitive;
 
-#[derive(Clone, Copy)]
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum PassDirection {
+    Left,
+    Right,
+    Cross,
+    None,
+}
+
+#[derive(Copy, Clone)]
 pub struct Move(pub usize, pub Card);
 
 #[derive(Debug)]
@@ -41,6 +49,17 @@ pub enum Suit {
 }
 
 
+impl PassDirection {
+    pub fn index_shift(&self) -> usize {
+        match self {
+            PassDirection::None => 0,
+            PassDirection::Left => 1,
+            PassDirection::Cross => 2,
+            PassDirection::Right => 3,
+        }
+    }
+}
+
 impl Move {
     pub fn pidx(&self) -> usize {
         self.0
@@ -78,6 +97,10 @@ impl Hand {
 
     pub fn remove(&mut self, card: Card) {
         self.cards.retain(|c| *c != card);
+    }
+
+    pub fn add(&mut self, card: Card) {
+        self.cards.push(card);
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::shared::actor::Actor;
-use crate::shared::data::{Card, Hand, Move, Rank, Suit};
+use crate::shared::data::{Card, Hand, Move, PassDirection, Rank, Suit};
 use crate::shared::player::Player;
 use std::convert::TryInto;
 
@@ -81,6 +81,15 @@ impl<'a> GameState<'a> {
             for pidx in 0..4 {
                 if self.scored[pidx] { self.score[pidx] = 0; }
                 else { self.score[pidx] = 36; }
+            }
+        }
+    }
+
+    pub fn did_pass(&mut self, direction: PassDirection, passed_cards: &[Vec<Card>; 4]) {
+        for pidx in 0..4 {
+            for card in &passed_cards[pidx] {
+                self.players[pidx].hand_mut().remove(*card);
+                self.players[(pidx + direction.index_shift()) % 4].hand_mut().add(*card);
             }
         }
     }

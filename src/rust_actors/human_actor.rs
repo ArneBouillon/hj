@@ -3,6 +3,7 @@ use crate::shared::actor::Actor;
 use crate::shared::data::{Card, Move};
 
 use colored::Colorize;
+use crate::PassDirection;
 
 pub struct HumanActor {
     cards: Vec<Card>,
@@ -96,4 +97,8 @@ impl Actor for HumanActor {
     }
 
     fn end_game(&mut self, _scores: [isize; 4]) {}
+
+    fn get_pass(&mut self, direction: PassDirection) -> Vec<Card> {
+        todo!()
+    }
 }

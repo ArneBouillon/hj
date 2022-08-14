@@ -6,6 +6,7 @@ use std::io::{Read, Write};
 
 use json;
 use num;
+use crate::PassDirection;
 
 pub struct JSONActor {
     child : Child,
@@ -100,5 +101,9 @@ impl Actor for JSONActor {
         let mut buffer = [32; 1000];
         (&mut self.child.stdout.as_mut().unwrap()).read(&mut buffer).unwrap();
         let _parsed = json::parse(&String::from_utf8_lossy(&buffer)).unwrap();
+    }
+
+    fn get_pass(&mut self, direction: PassDirection) -> Vec<Card> {
+        todo!()
     }
 }

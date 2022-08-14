@@ -4,6 +4,7 @@ use crate::shared::data::{Card, Move, Rank, Suit};
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use crate::PassDirection;
 
 pub struct RandomActor {
     cards: Vec<Card>,
@@ -60,4 +61,8 @@ impl Actor for RandomActor {
     }
 
     fn end_game(&mut self, _score: [isize; 4]) {}
+
+    fn get_pass(&mut self, direction: PassDirection) -> Vec<Card> {
+        todo!()
+    }
 }
