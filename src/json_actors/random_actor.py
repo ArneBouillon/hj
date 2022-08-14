@@ -65,6 +65,16 @@ while True:
     elif message['message'] == 'end_game':
         string = '[]'
     elif message['message'] == 'get_pass':
+        if message['direction'] == 'none':
+            pass_cards = []
+        else:
+            random.shuffle(cards)
+            pass_cards = cards[:3]
+        for pass_card in pass_cards: cards.remove(pass_card)
+        string = json.dumps({'cards': pass_cards})
+    elif message['message'] == 'end_pass':
+        cards += message['passed_cards']
+    else:
         raise Error()
 
     string += '\n'

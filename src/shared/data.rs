@@ -2,7 +2,7 @@ use core::clone::Clone;
 
 use num_derive::FromPrimitive;
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum PassDirection {
     Left,
     Right,

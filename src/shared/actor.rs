@@ -11,4 +11,6 @@ pub trait Actor {
     fn end_game(&mut self, score: [isize; 4]);
 
     fn get_pass(&mut self, direction: PassDirection) -> Vec<Card>;
+
+    fn end_pass(&mut self, passed_cards: &Vec<Card>);
 }

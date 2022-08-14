@@ -12,6 +12,7 @@ pub fn pass(direction: PassDirection, game_state: &mut GameState) -> Result<(), 
 
     for pidx in 0..4 { validate::validate_pass(direction, &passed_cards[pidx], pidx, game_state)?; }
     game_state.did_pass(direction, &passed_cards);
+    for pidx in 0..4 { game_state.players_mut()[(pidx + direction.index_shift()) % 4].actor_mut().end_pass(&passed_cards[pidx]); }
 
     Ok(())
 }

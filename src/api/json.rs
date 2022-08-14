@@ -104,6 +104,43 @@ impl Actor for JSONActor {
     }
 
     fn get_pass(&mut self, direction: PassDirection) -> Vec<Card> {
-        todo!()
+        let message = json::object!{
+            message: "get_pass",
+            direction: match direction {
+                PassDirection::None => "none", PassDirection::Left => "left", PassDirection::Right => "right", PassDirection::Cross => "cross",
+            },
+        };
+
+        (&mut self.child.stdin).as_mut().unwrap().write((json::stringify(message) + "\n").as_bytes()).unwrap();
+        let mut buffer = [32; 1];
+        let mut string = "".to_owned();
+        loop {
+            (&mut self.child.stdout.as_mut().unwrap()).take(1).read(&mut buffer).unwrap();
+            if buffer == [b'\n'] { break; }
+            else { string += &String::from_utf8_lossy(&buffer); }
+        }
+        let parsed = json::parse(&string).unwrap();
+
+        match &parsed["cards"] {
+            json::JsonValue::Array(vec) => vec.iter().map(|c|
+                match c {
+                    json::JsonValue::Array(vec) => JSONActor::deserialize_card(vec.iter().map(|num| num.as_usize().unwrap()).collect()),
+                    _ => panic!("Should be an array of arrays."),
+                }
+            ).collect(),
+            _ => panic!("Should be an array."),
+        }
+    }
+
+    fn end_pass(&mut self, passed_cards: &Vec<Card>) {
+        let message = json::object!{
+            message: "end_pass",
+            passed_cards: JSONActor::serialize_cards(passed_cards),
+        };
+
+        (&mut self.child.stdin).as_mut().unwrap().write((json::stringify(message) + "\n").as_bytes()).unwrap();
+        let mut buffer = [32; 1000];
+        (&mut self.child.stdout.as_mut().unwrap()).read(&mut buffer).unwrap();
+        let _parsed = json::parse(&String::from_utf8_lossy(&buffer)).unwrap();
     }
 }

@@ -9,7 +9,7 @@ use crate::rust_actors::random_actor::RandomActor;
 use crate::shared::data::PassDirection;
 
 fn main() {
-    let scores = internal::game::play(PassDirection::None, [
+    let scores = internal::game::play(PassDirection::Left, [
         &mut HumanActor::new(),
         &mut RandomActor::new(),
         &mut RandomActor::new(),

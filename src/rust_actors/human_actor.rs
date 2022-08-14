@@ -1,9 +1,10 @@
 use core::default::Default;
 use crate::shared::actor::Actor;
-use crate::shared::data::{Card, Move};
+use crate::shared::data::{Card, Move, PassDirection};
+
+use std::io::Read;
 
 use colored::Colorize;
-use crate::PassDirection;
 
 pub struct HumanActor {
     cards: Vec<Card>,
@@ -72,6 +73,12 @@ impl HumanActor {
         std::io::stdin().read_line(&mut input).unwrap();
         **choices[input.trim().parse::<usize>().unwrap() - 1]
     }
+
+    pub fn pause() {
+        fn pause() {
+            std::io::stdin().read(&mut [0]).unwrap();
+        }
+    }
 }
 
 impl Actor for HumanActor {
@@ -93,12 +100,30 @@ impl Actor for HumanActor {
         self.show_moves(played_moves, Some(winner_pidx));
 
         let mut input = String::new();
-        std::io::stdin().read_line(&mut input).unwrap();
+        HumanActor::pause();
     }
 
     fn end_game(&mut self, _scores: [isize; 4]) {}
 
     fn get_pass(&mut self, direction: PassDirection) -> Vec<Card> {
-        todo!()
+        match direction {
+            PassDirection::None => { println!("No-pass round"); HumanActor::pause(); vec![] }
+            _ => {
+                println!("Pass direction: {:?}", direction);
+                HumanActor::pause();
+                (0..3).map(|_| { let card = self.query_card(); self.cards.retain(|c| *c != card); card }).collect()
+            }
+        }
+    }
+
+    fn end_pass(&mut self, passed_cards: &Vec<Card>) {
+        self.cards.append(&mut passed_cards.clone());
+        if passed_cards.len() > 0 {
+            println!("Cards received:");
+            for card in passed_cards {
+                println!("  {:?}", card);
+            }
+            HumanActor::pause();
+        }
     }
 }
