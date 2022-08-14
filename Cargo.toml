@@ -1,0 +1,16 @@
+[package]
+name = "hj"
+version = "0.0.1"
+authors = ["Arne Bouillon <arne.bouillon@gmail.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+colored = "2.0.0"
+iter_fixed = "0.3.1"
+json = "0.12.4"
+num = "0.4"
+num-derive = "0.3"
+num-traits = "0.2"
+rand = "0.8.0"
