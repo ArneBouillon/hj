@@ -75,9 +75,7 @@ impl HumanActor {
     }
 
     pub fn pause() {
-        fn pause() {
-            std::io::stdin().read(&mut [0]).unwrap();
-        }
+        std::io::stdin().read(&mut [0]).unwrap();
     }
 }
 
@@ -99,7 +97,6 @@ impl Actor for HumanActor {
         self.score[winner_pidx] += played_moves.iter().map(|m| m.card().score()).sum::<isize>();
         self.show_moves(played_moves, Some(winner_pidx));
 
-        let mut input = String::new();
         HumanActor::pause();
     }
 

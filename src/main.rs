@@ -8,7 +8,6 @@ use crate::api::json::JSONActor;
 use crate::rust_actors::human_actor::HumanActor;
 use crate::rust_actors::random_actor::RandomActor;
 use crate::rust_actors::rule_actor_v1::RuleActorV1;
-use crate::shared::actor::Actor;
 use crate::shared::data::{Card, PassDirection, Rank, Suit};
 
 fn main() {
@@ -33,11 +32,11 @@ fn main() {
 
     let mut total_scores = [0, 0, 0, 0];
 
-    for _ in 0..10_000 {
-        let scores = internal::game::play(PassDirection::Left, [
+    for round_num in 0..10_000 {
+        let scores = internal::game::play(PassDirection::from_round(round_num), [
             &mut RuleActorV1::new(),
-            &mut RuleActorV1::new(),
-            &mut RuleActorV1::new(),
+            &mut RandomActor::new(),
+            &mut RandomActor::new(),
             &mut RandomActor::new(),
         ]).expect("Errors should not occur.");
         total_scores[0] += scores[0];

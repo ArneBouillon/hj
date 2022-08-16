@@ -58,6 +58,16 @@ impl PassDirection {
             PassDirection::Right => 3,
         }
     }
+
+    pub fn from_round(num: usize) -> Self {
+        match num % 4 {
+            0 => PassDirection::Left,
+            1 => PassDirection::Right,
+            2 => PassDirection::Cross,
+            3 => PassDirection::Cross,
+            _ => unreachable!(),
+        }
+    }
 }
 
 impl Move {
@@ -134,10 +144,22 @@ impl Rank {
             Rank::Nine, Rank::Ten, Rank::Jack, Rank::Queen, Rank::King, Rank::Ace,
         ]
     }
+
+    pub fn to_index(&self) -> usize {
+        *self as usize - 2
+    }
+
+    pub fn from_index(idx: u8) -> Self {
+        num::FromPrimitive::from_u8(idx + 2).unwrap()
+    }
 }
 
 impl Suit {
     pub fn all() -> [Suit; 4] {
         [Suit::Spades, Suit::Clubs, Suit::Diamonds, Suit::Hearts]
+    }
+
+    pub fn to_index(&self) -> usize {
+        *self as usize - 1
     }
 }
