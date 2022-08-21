@@ -33,6 +33,31 @@ impl RuleActorV1 {
         (wins, empty_scores)
     }
 
+    fn jack_of_diamonds_cost(ranks: &Vec<Rank>, all_ranks: &Vec<Rank>) -> f32 {
+        let small_owned = ranks.iter().filter(|r| **r < Rank::Jack).count();
+        let jack_owned = ranks.iter().any(|r| *r == Rank::Jack);
+        let big_owned = ranks.iter().filter(|r| **r > Rank::Jack).count();
+
+        let jack_left = all_ranks.iter().any(|r| *r == Rank::Jack);
+        let big_left = all_ranks.iter().filter(|r| **r > Rank::Jack).count();
+
+        if !jack_left { return 0.; }
+
+        match big_owned {
+            0 => if jack_owned {
+                if small_owned >= big_left { -8. } else { -(8_usize.saturating_sub(4 * (big_left - small_owned)) as f32) }
+            } else { 0. },
+            1 => if jack_owned {
+                if small_owned >= big_left - 1 { -8. } else { -(8_usize.saturating_sub(2 * (big_left - small_owned - 1)) as f32) }
+            } else {
+                if small_owned >= big_left - 1 { -3. } else { -(3_usize.saturating_sub(1 * (big_left - small_owned - 1)) as f32) }
+            },
+            _ => if jack_owned { -8. } else {
+                if small_owned >= big_left - big_owned { -5. } else { -(5_usize.saturating_sub(2 * (big_left - small_owned - big_owned)) as f32) }
+            }
+        }
+    }
+
     fn eval_state_spades(&self, cards: &Vec<Card>) -> (f32, f32, Vec<f32>) {
         if cards.is_empty() {
             return (0., 0., vec![]);
@@ -109,7 +134,7 @@ impl RuleActorV1 {
         let all_ranks: Vec<Rank> = self.cards_in_game[2].iter().enumerate().filter_map(|(i, r)| if *r { Some(Rank::from_index(i as u8)) } else { None }).collect(); //Rank::all().into_iter().collect();
 
         let (wins, empty_costs) = RuleActorV1::eval_ranks(&ranks, &all_ranks);
-        let cost = wins;
+        let cost = wins + RuleActorV1::jack_of_diamonds_cost(&ranks, &all_ranks);
 
         (cost, cards.len() as f32, empty_costs)
     }
@@ -152,11 +177,11 @@ impl RuleActorV1 {
             } else {
                 if let Some((throw_away_score, throw_away_sidx)) = empty_scores.pop() {
                     counts_left[*throw_away_sidx] = counts_left[*throw_away_sidx].saturating_sub(1);
-                    total_score += 0. * throw_away_score;
+                    total_score += 0.8 * throw_away_score;
                 }
             }
         }
 
-        NonNan::new(total_score).unwrap()
+        NonNan::new(0.8 * total_score).unwrap()
     }
 }
