@@ -6,6 +6,7 @@ mod util;
 
 use crate::api::json::JSONActor;
 use crate::rust_actors::human_actor::HumanActor;
+use crate::rust_actors::mcts_actor_v1::MCTSActorV1;
 use crate::rust_actors::random_actor::RandomActor;
 use crate::rust_actors::rule_actor_v1::RuleActorV1;
 use crate::shared::data::{Card, PassDirection, Rank, Suit};
@@ -29,20 +30,21 @@ fn main() {
     // ]);
     // println!("{:?}", actor.choose_three_to_pass());
 
-
     let mut total_scores = [0, 0, 0, 0];
 
-    for round_num in 0..10_000 {
+    for round_num in 0..1000 {
         let scores = internal::game::play(PassDirection::from_round(round_num), [
-            &mut RuleActorV1::new(),
-            &mut RandomActor::new(),
-            &mut RandomActor::new(),
-            &mut RandomActor::new(),
+            &mut HumanActor::new(),
+            &mut MCTSActorV1::<RuleActorV1>::new(50, 40),
+            &mut MCTSActorV1::<RuleActorV1>::new(50, 40),
+            &mut MCTSActorV1::<RuleActorV1>::new(50, 40),
         ]).expect("Errors should not occur.");
         total_scores[0] += scores[0];
         total_scores[1] += scores[1];
         total_scores[2] += scores[2];
         total_scores[3] += scores[3];
+
+        println!("  {}: {:?}      (cumulative: {:?})", round_num, scores, total_scores);
     }
     println!("{:?}", total_scores);
 }

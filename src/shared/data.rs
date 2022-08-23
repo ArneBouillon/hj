@@ -18,11 +18,11 @@ pub struct Hand {
     cards: Vec<Card>,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Card(pub Rank, pub Suit);
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, FromPrimitive)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, FromPrimitive, Hash)]
 pub enum Rank {
     Two = 2,
     Three = 3,
@@ -40,7 +40,7 @@ pub enum Rank {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, FromPrimitive)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, FromPrimitive, Hash)]
 pub enum Suit {
     Spades = 1,
     Clubs = 2,
@@ -64,7 +64,7 @@ impl PassDirection {
             0 => PassDirection::Left,
             1 => PassDirection::Right,
             2 => PassDirection::Cross,
-            3 => PassDirection::Cross,
+            3 => PassDirection::None,
             _ => unreachable!(),
         }
     }
@@ -115,6 +115,12 @@ impl Hand {
 }
 
 impl Card {
+    pub fn all() -> Vec<Card> {
+        Suit::all().iter().flat_map(
+            |suit| Rank::all().into_iter().map(move |rank| Card::new(rank, *suit)).collect::<Vec<Card>>()
+        ).collect()
+    }
+
     pub fn new(rank: Rank, suit: Suit) -> Self {
         Self(rank, suit)
     }

@@ -19,9 +19,7 @@ pub struct GameState<'a> {
 
 impl<'a> GameState<'a> {
     pub fn new(actors: [&'a mut dyn Actor; 4]) -> Self {
-        let mut cards: Vec<Card> = Suit::all().iter().flat_map(
-            |suit| Rank::all().into_iter().map(move |rank| Card::new(rank, *suit)).collect::<Vec<Card>>()
-        ).collect();
+        let mut cards = Card::all();
 
         cards.shuffle(&mut thread_rng());
         let hands: [Hand; 4] = cards.chunks(13)

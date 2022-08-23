@@ -16,8 +16,8 @@ impl RuleActorV1 {
                 3 => partial_score,
                 len => {
                     let togo = 3 - len;
-                    let total_still_left = (self.pidx+1 .. self.pidx+4).filter(|pidx| self.still_has[new_suit.to_index()][pidx % 4]).count();
-                    let togo_still_have = (self.pidx+1 .. self.pidx+togo+1).filter(|pidx| self.still_has[new_suit.to_index()][pidx % 4]).count();
+                    let total_still_left = (self.pidx+1 .. self.pidx+4).filter(|pidx| self.player_state.still_has[new_suit.to_index()][pidx % 4]).count();
+                    let togo_still_have = (self.pidx+1 .. self.pidx+togo+1).filter(|pidx| self.player_state.still_has[new_suit.to_index()][pidx % 4]).count();
 
                     let total_left = self.opponent_cards_in_game[new_suit.to_index()].iter().filter(|b| **b).count();
                     let better_left = if partial_score >= 0. {

@@ -22,7 +22,7 @@ pub fn play(first_pidx: usize, game_state: &mut GameState) -> Result<(usize, Vec
     Ok((find_winner_pidx(&played_moves), played_moves))
 }
 
-fn find_winner_pidx(played_moves: &Vec<Move>) -> usize {
+pub fn find_winner_pidx(played_moves: &Vec<Move>) -> usize {
     let first_move = played_moves.first().expect("There should have been 4 cards played.");
     played_moves.iter().skip(1).fold(first_move, |best_move, current_move| {
         if current_move.card().suit() == best_move.card().suit()

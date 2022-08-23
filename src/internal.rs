@@ -1,5 +1,5 @@
 pub(crate) mod game;
 mod game_state;
 mod pass;
-mod round;
+pub mod round; // Shouldn't be pub
 mod validate;

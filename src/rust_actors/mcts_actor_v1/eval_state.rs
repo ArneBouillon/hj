@@ -1,11 +1,13 @@
-use crate::{Card, Rank, RuleActorV1, Suit};
+use crate::{Card, Rank, Suit};
 use crate::util::non_nan::NonNan;
 
 use iter_fixed::IntoIteratorFixed;
 use std::cmp::Reverse;
 use rand::Rng;
+use crate::rust_actors::mcts_actor_v1::MCTSActorV1;
+use crate::rust_actors::shared::MediasResActor;
 
-impl RuleActorV1 {
+impl<T : MediasResActor> MCTSActorV1<T> {
     fn eval_ranks(ranks: &Vec<Rank>, all_ranks: &Vec<Rank>) -> (f32, Vec<f32>) {
         if ranks.len() == all_ranks.len() { return (0., vec![]); }
 
@@ -119,7 +121,7 @@ impl RuleActorV1 {
                 if counter == 0 { break; }
             }
         }
-        let (wins, empty_costs) = RuleActorV1::eval_ranks(&ranks, &all_ranks);
+        let (wins, empty_costs) = MCTSActorV1::<T>::eval_ranks(&ranks, &all_ranks);
         let cost = wins;
 
         (cost, cards.len() as f32, empty_costs)
@@ -133,8 +135,8 @@ impl RuleActorV1 {
         let ranks: Vec<Rank> = cards.iter().map(|c| c.rank()).collect();
         let all_ranks: Vec<Rank> = self.player_state.cards_in_game[2].iter().enumerate().filter_map(|(i, r)| if *r { Some(Rank::from_index(i as u8)) } else { None }).collect(); //Rank::all().into_iter().collect();
 
-        let (wins, empty_costs) = RuleActorV1::eval_ranks(&ranks, &all_ranks);
-        let cost = wins + RuleActorV1::jack_of_diamonds_cost(&ranks, &all_ranks);
+        let (wins, empty_costs) = MCTSActorV1::<T>::eval_ranks(&ranks, &all_ranks);
+        let cost = wins + MCTSActorV1::<T>::jack_of_diamonds_cost(&ranks, &all_ranks);
 
         (cost, cards.len() as f32, empty_costs)
     }
@@ -147,7 +149,7 @@ impl RuleActorV1 {
         let ranks: Vec<Rank> = cards.iter().map(|c| c.rank()).collect();
         let all_ranks: Vec<Rank> = self.player_state.cards_in_game[3].iter().enumerate().filter_map(|(i, r)| if *r { Some(Rank::from_index(i as u8)) } else { None }).collect();
 
-        let (wins, empty_costs) = RuleActorV1::eval_ranks(&ranks, &all_ranks);
+        let (wins, empty_costs) = MCTSActorV1::<T>::eval_ranks(&ranks, &all_ranks);
         let cost = wins * 4.;
 
         (cost, cards.len() as f32, empty_costs)
