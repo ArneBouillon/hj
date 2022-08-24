@@ -5,8 +5,7 @@ use std::convert::TryInto;
 
 use iter_fixed::IntoIteratorFixed;
 
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+use crate::util;
 
 pub struct GameState<'a> {
     current_round: usize,
@@ -18,21 +17,18 @@ pub struct GameState<'a> {
 
 
 impl<'a> GameState<'a> {
-    pub fn new(actors: [&'a mut dyn Actor; 4]) -> Self {
-        let mut cards = Card::all();
-
-        cards.shuffle(&mut thread_rng());
-        let hands: [Hand; 4] = cards.chunks(13)
-                                    .map(move |cards| Hand::new(cards.to_vec()))
-                                    .collect::<Vec<Hand>>()
-                                    .try_into()
-                                    .expect("52 cards should divide into exactly four hands.");
+    pub fn new_from_hands(hands: [Hand; 4], actors: [&'a mut dyn Actor; 4]) -> Self {
         let players = actors.into_iter_fixed().zip(hands).enumerate().map(|(pidx, (a, h))| {
             a.initialize(pidx, h.cards());
             Player::new(a, h)
         }).collect();
 
         Self { current_round: 0, hearts_played: false, players, score: [0; 4], scored: [false; 4] }
+    }
+
+    pub fn new(actors: [&'a mut dyn Actor; 4]) -> Self {
+        let hands = util::deck::get_shuffled_hands();
+        Self::new_from_hands(hands, actors)
     }
 
     pub fn current_round(&self) -> usize {

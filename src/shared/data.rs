@@ -13,7 +13,7 @@ pub enum PassDirection {
 #[derive(Copy, Clone)]
 pub struct Move(pub usize, pub Card);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Hand {
     cards: Vec<Card>,
 }
