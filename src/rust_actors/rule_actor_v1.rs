@@ -135,6 +135,7 @@ impl Actor for RuleActorV1 {
     }
 
     fn play_card(&mut self, played_moves: &Vec<Move>) -> Card {
+        // println!("Asked to play card; cards left: {}", self.player_state.cards.len());
         self.player_state.update_play_card(played_moves);
         self.process_moves(played_moves);
 

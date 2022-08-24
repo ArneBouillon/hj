@@ -40,7 +40,7 @@ fn main() {
     for round_num in (0..1000).step_by(1) {
         let base_hands = util::deck::get_shuffled_hands();
 
-        let handles: Vec<_> = (0..4).map(|player_shift| {
+        let handles: Vec<_> = (0..1).map(|player_shift| {
             let hands = [0, 1, 2, 3].into_iter_fixed().map(|i| base_hands[(player_shift + i) % 4].clone()).collect();
             thread::spawn(move || {
                 internal::game::play_with_hands(

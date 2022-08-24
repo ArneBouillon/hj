@@ -10,6 +10,7 @@ mod determinize;
 mod eval_state;
 mod game_state;
 mod mcts;
+mod mcts_mod;
 
 use std::cmp::{Eq, Ord, Reverse};
 use std::collections::{BinaryHeap, HashMap};
@@ -148,35 +149,26 @@ impl<T: MediasResActor> Actor for MCTSActorV1<T> {
         self.player_state.update_play_card(played_moves);
         self.process_moves(played_moves);
 
-        let best_card = (0..self.tries).map(|_| {
-            let mut game_state = determinize::determinize(self.pidx, &self.player_state, played_moves);
-            mcts::mcts(&mut game_state, self.timeout)
-        }).fold(HashMap::<Card, (f32, usize)>::new(), |mut acc, item| {
-            item.iter().for_each(|tup|
-                match acc.get_mut(&tup.0) {
-                    Some(entry) => { entry.0 += tup.1; entry.1 += tup.2; },
-                    None => { acc.insert(tup.0, (tup.1, tup.2)); },
-                }
-            );
-            acc
-        }).into_iter().max_by_key(|(card, (value, visits))| {
-            NonNan::new(if *visits == 0 { 0. } else { value / *visits as f32 }).unwrap()
-        }).unwrap().0;
-
-        // let mut best_cards: Vec<Card> = (0..self.tries).map(|_| {
+        // let best_card = (0..self.tries).map(|_| {
         //     let mut game_state = determinize::determinize(self.pidx, &self.player_state, played_moves);
         //     mcts::mcts(&mut game_state, self.timeout)
-        // }).collect();
-        // // let best_card = best_cards.first().unwrap();
-        // best_cards.sort();
-        // let mut bcard = best_cards.first().unwrap(); let mut bcount = 0; let mut card = bcard; let mut count = 0;
-        // for c in &best_cards { if c == card { count += 1; } else { count = 1; card = c; }; if count > bcount { bcount = count; bcard = card; } }
-        // let best_card = bcard;
-        // println!("    {}", bcount);
+        // }).fold(HashMap::<Card, (f32, usize)>::new(), |mut acc, item| {
+        //     item.iter().for_each(|tup|
+        //         match acc.get_mut(&tup.0) {
+        //             Some(entry) => { entry.0 += tup.1; entry.1 += tup.2; },
+        //             None => { acc.insert(tup.0, (tup.1, tup.2)); },
+        //         }
+        //     );
+        //     acc
+        // }).into_iter().max_by_key(|(card, (value, visits))| {
+        //     NonNan::new(if *visits == 0 { 0. } else { value / *visits as f32 }).unwrap()
+        // }).unwrap().0;
 
-
-        // let mut game_state = determinize::determinize(self.pidx, &self.player_state, played_moves);
-        // let best_card = mcts::mcts(&mut game_state, 100);
+        // println!("Starting...");
+        let best_card = mcts_mod::mcts_mod(self.pidx, &mut self.player_state, played_moves, self.timeout).into_iter().max_by_key(|(card, value, visits)| {
+            NonNan::new(if *visits == 0 { 0. } else { value / *visits as f32 }).unwrap()
+        }).unwrap().0;
+        // println!("Ending...");
 
         self.player_state.update_did_play_card(&best_card);
 

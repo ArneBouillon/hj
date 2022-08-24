@@ -7,7 +7,7 @@ use std::time::SystemTime;
 use crate::{Card, HumanActor, Rank, RuleActorV1, Suit};
 use crate::rust_actors::shared::MediasResActor;
 
-pub struct Node {
+struct Node {
     visits: usize,
     value: f32,
     children: Vec<Node>,
@@ -56,21 +56,6 @@ impl Node {
         index
     }
 
-    pub fn best_card(&self) -> (Card, f32) {
-        let node = self.children().iter().max_by_key(|node| {
-            NonNan::new(node.weight()).unwrap()
-        }).unwrap();
-
-        (
-            node.last_move.unwrap().card(),
-            node.weight(),
-        )
-    }
-
-    pub fn weight(&self) -> f32 {
-        if self.visits == 0 { 0. } else { self.value as f32 / self.visits as f32 }
-    }
-
     pub fn search_weight(&self, parent_visits_ln: f32) -> f32 {
         if self.visits == 0 {
             0.
@@ -96,7 +81,7 @@ impl Node {
 
     pub fn update(&mut self, result: [isize; 4]) {
         self.visits += 1;
-        self.value += (36 - result[(self.state.current_pidx + 3) % 4]) as f32 / 46.0;
+        self.value += (36 - result[(self.state.current_pidx + 3) % 4]) as f32 / 46.;
     }
 
     pub fn max_depth(&self) -> usize {
@@ -201,7 +186,7 @@ fn play_randomly(state: &GameState) -> [isize; 4] {
     }
 }
 
-pub fn mcts_rec(root: &mut Node) -> [isize; 4] {
+fn mcts_rec(root: &mut Node) -> [isize; 4] {
     if root.fully_expanded() {
         let index = root.best_child(root.visits);
         let best_child = root.children_mut().get_mut(index).unwrap();
@@ -248,14 +233,4 @@ pub fn mcts(game_state: &mut GameState, time: usize) -> Vec<(Card, f32, usize)> 
     }
 
     root.children.iter().map(|node| (node.last_move.unwrap().card(), node.value, node.visits)).collect()
-
-    // // println!("Number of simulations: {}", count);
-    // // println!("Test: {}", root.value);
-    // let (best_card, weight) = root.best_card();
-    // // println!("Expected result: {}", weight);
-    //
-    // // println!("Number of simulations: {}", count);
-    // // println!("Max depth: {}", root.max_depth());
-    //
-    // best_card
 }
