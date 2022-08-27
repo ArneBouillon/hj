@@ -1,8 +1,9 @@
-use crate::{Card, Rank, RuleActorV1, Suit};
+use crate::{Card, Rank, ActorRuleV1, Suit};
+use crate::rust_actors::player_state::ExtendedPlayerStateInterface;
 use crate::shared::data::Move;
 use crate::util::non_nan::NonNan;
 
-impl RuleActorV1 {
+impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
     pub(super) fn evaluate_round(&self, played_moves: &Vec<Move>, new_card: Card) -> NonNan {
         let Card(new_rank, new_suit) = new_card;
         if let Some(Move(_, Card(first_rank, first_suit))) = played_moves.first() {
@@ -16,14 +17,14 @@ impl RuleActorV1 {
                 3 => partial_score,
                 len => {
                     let togo = 3 - len;
-                    let total_still_left = (self.pidx+1 .. self.pidx+4).filter(|pidx| self.player_state.still_has[new_suit.to_index()][pidx % 4]).count();
-                    let togo_still_have = (self.pidx+1 .. self.pidx+togo+1).filter(|pidx| self.player_state.still_has[new_suit.to_index()][pidx % 4]).count();
+                    let total_still_left = (self.player_state.pidx()+1 .. self.player_state.pidx()+4).filter(|pidx| self.player_state.still_has()[new_suit.to_index()][pidx % 4]).count();
+                    let togo_still_have = (self.player_state.pidx()+1 .. self.player_state.pidx()+togo+1).filter(|pidx| self.player_state.still_has()[new_suit.to_index()][pidx % 4]).count();
 
-                    let total_left = self.opponent_cards_in_game[new_suit.to_index()].iter().filter(|b| **b).count();
+                    let total_left = self.player_state.opponent_cards_in_game()[new_suit.to_index()].iter().filter(|b| **b).count();
                     let better_left = if partial_score >= 0. {
-                        self.opponent_cards_in_game[new_suit.to_index()][..new_rank.to_index()].iter().filter(|b| **b).count()
+                        self.player_state.opponent_cards_in_game()[new_suit.to_index()][..new_rank.to_index()].iter().filter(|b| **b).count()
                     } else {
-                        self.opponent_cards_in_game[new_suit.to_index()][new_rank.to_index()..].iter().filter(|b| **b).count()
+                        self.player_state.opponent_cards_in_game()[new_suit.to_index()][new_rank.to_index()..].iter().filter(|b| **b).count()
                     };
 
                     let n = total_still_left as u32; let a = togo_still_have as u32; let g = better_left as u32; let b = total_left as u32 - g;
@@ -38,7 +39,7 @@ impl RuleActorV1 {
                     (1. - odds_someone_will_take_over) * (
                         partial_score
                             + togo_still_have as f32 * (if new_suit == Suit::Hearts { 1. } else { 0.2 })
-                            + (togo - togo_still_have) as f32 * (0.8 + if self.opponent_cards_in_game[Suit::Spades.to_index()][Rank::Queen.to_index()] { 3. } else { 0. })
+                            + (togo - togo_still_have) as f32 * (0.8 + if self.player_state.opponent_cards_in_game()[Suit::Spades.to_index()][Rank::Queen.to_index()] { 3. } else { 0. })
                     )
                 },
             }

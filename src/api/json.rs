@@ -13,6 +13,7 @@ pub struct JSONActor {
 }
 
 impl JSONActor {
+    #[allow(dead_code)]
     pub fn new(command_string: String) -> Self {
         Self {
             child: Command::new(command_string).stdout(Stdio::piped())

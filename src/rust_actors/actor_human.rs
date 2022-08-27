@@ -6,14 +6,15 @@ use std::io::Read;
 
 use colored::Colorize;
 
-pub struct HumanActor {
+pub struct ActorHuman {
     cards: Vec<Card>,
     pidx: usize,
     score: [isize; 4],
 }
 
 
-impl HumanActor {
+impl ActorHuman {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self { cards: vec![], pidx: 0, score: [0; 4] }
     }
@@ -79,7 +80,7 @@ impl HumanActor {
     }
 }
 
-impl Actor for HumanActor {
+impl Actor for ActorHuman {
     fn initialize(&mut self, pidx: usize, cards: &Vec<Card>) {
         self.pidx = pidx;
         self.cards = cards.clone();
@@ -97,17 +98,17 @@ impl Actor for HumanActor {
         self.score[winner_pidx] += played_moves.iter().map(|m| m.card().score()).sum::<isize>();
         self.show_moves(played_moves, Some(winner_pidx));
 
-        HumanActor::pause();
+        ActorHuman::pause();
     }
 
     fn end_game(&mut self, _scores: [isize; 4]) {}
 
     fn get_pass(&mut self, direction: PassDirection) -> Vec<Card> {
         match direction {
-            PassDirection::None => { println!("No-pass round"); HumanActor::pause(); vec![] }
+            PassDirection::None => { println!("No-pass round"); ActorHuman::pause(); vec![] }
             _ => {
                 println!("Pass direction: {:?}", direction);
-                HumanActor::pause();
+                ActorHuman::pause();
                 (0..3).map(|_| { let card = self.query_card(); self.cards.retain(|c| *c != card); card }).collect()
             }
         }
@@ -120,7 +121,7 @@ impl Actor for HumanActor {
             for card in passed_cards {
                 println!("  {:?}", card);
             }
-            HumanActor::pause();
+            ActorHuman::pause();
         }
     }
 }

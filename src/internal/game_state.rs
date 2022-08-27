@@ -1,7 +1,6 @@
 use crate::shared::actor::Actor;
-use crate::shared::data::{Card, Hand, Move, PassDirection, Rank, Suit};
+use crate::shared::data::{Card, Hand, Move, PassDirection, Suit};
 use crate::shared::player::Player;
-use std::convert::TryInto;
 
 use iter_fixed::IntoIteratorFixed;
 
@@ -26,6 +25,7 @@ impl<'a> GameState<'a> {
         Self { current_round: 0, hearts_played: false, players, score: [0; 4], scored: [false; 4] }
     }
 
+    #[allow(dead_code)]
     pub fn new(actors: [&'a mut dyn Actor; 4]) -> Self {
         let hands = util::deck::get_shuffled_hands();
         Self::new_from_hands(hands, actors)

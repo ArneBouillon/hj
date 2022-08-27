@@ -1,5 +1,6 @@
-pub mod human_actor;
-pub mod mcts_actor_v1;
-pub mod random_actor;
-pub mod rule_actor_v1;
-pub mod shared;
+pub mod actor_human;
+pub mod actor_mcts_v1;
+pub mod actor_random;
+pub mod actor_rule_v1;
+
+pub mod player_state;

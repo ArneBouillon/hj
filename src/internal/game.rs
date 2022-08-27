@@ -25,11 +25,12 @@ fn _play(pass_direction: PassDirection, mut game_state: GameState) -> Result<[is
 }
 
 pub fn play_with_hands(hands: [Hand; 4], pass_direction: PassDirection, actors: [&mut dyn Actor; 4]) -> Result<[isize; 4], HJError> {
-    let mut game_state = GameState::new_from_hands(hands, actors);
+    let game_state = GameState::new_from_hands(hands, actors);
     _play(pass_direction, game_state)
 }
 
+#[allow(dead_code)]
 pub fn play(pass_direction: PassDirection, actors: [&mut dyn Actor; 4]) -> Result<[isize; 4], HJError> {
-    let mut game_state = GameState::new(actors);
+    let game_state = GameState::new(actors);
     _play(pass_direction, game_state)
 }

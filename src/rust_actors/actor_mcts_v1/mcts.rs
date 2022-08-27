@@ -1,24 +1,26 @@
-use crate::rust_actors::mcts_actor_v1::game_state::GameState;
+use crate::rust_actors::actor_mcts_v1::game_state::GameState;
 use crate::shared::data::Move;
 use crate::shared::actor::Actor;
 use crate::util::non_nan::NonNan;
 
 use std::time::SystemTime;
-use crate::{Card, HumanActor, Rank, RuleActorV1, Suit};
-use crate::rust_actors::shared::MediasResActor;
+use crate::{Card, Rank, ActorRuleV1, Suit, ExtendedPlayerState, DefaultPlayerState};
+use crate::rust_actors::player_state::DefaultPlayerStateInterface;
+use crate::rust_actors::player_state::BasicPlayerStateInterface;
+use crate::rust_actors::player_state::MediasResActor;
 
-struct Node {
+struct Node<PlayerState : DefaultPlayerStateInterface> {
     visits: usize,
     value: f32,
-    children: Vec<Node>,
+    children: Vec<Node<PlayerState>>,
     children_left: isize,
     last_move: Option<Move>,
-    state: GameState,
+    state: GameState<PlayerState>,
     result: Option<[isize; 4]>
 }
 
-impl Node {
-    pub fn new(state: GameState, last_move: Option<Move>, result: Option<[isize; 4]>) -> Node {
+impl<PlayerState : DefaultPlayerStateInterface> Node<PlayerState> {
+    pub fn new(state: GameState<PlayerState>, last_move: Option<Move>, result: Option<[isize; 4]>) -> Node<PlayerState> {
         Node {
             visits: 0,
             value: 0.,
@@ -30,19 +32,15 @@ impl Node {
         }
     }
 
-    pub fn children(&self) -> &Vec<Node> {
+    pub fn children(&self) -> &Vec<Node<PlayerState>> {
         &self.children
     }
 
-    pub fn children_mut(&mut self) -> &mut Vec<Node> {
+    pub fn children_mut(&mut self) -> &mut Vec<Node<PlayerState>> {
         &mut self.children
     }
 
-    pub fn state(&self) -> &GameState {
-        &self.state
-    }
-
-    pub fn state_mut(&mut self) -> &mut GameState {
+    pub fn state_mut(&mut self) -> &mut GameState<PlayerState> {
         &mut self.state
     }
 
@@ -83,42 +81,35 @@ impl Node {
         self.visits += 1;
         self.value += (36 - result[(self.state.current_pidx + 3) % 4]) as f32 / 46.;
     }
-
-    pub fn max_depth(&self) -> usize {
-        match self.children.len() {
-            0 => 1,
-            _ => 1 + self.children.iter().map(|c| c.max_depth()).max().unwrap(),
-        }
-    }
 }
 
-fn initial_vec(game_state: &GameState) -> Vec<Node> {
-    if game_state.player_states[game_state.current_pidx].cards.len() == 0 { return vec![]; }
+fn initial_vec<PlayerState : DefaultPlayerStateInterface>(game_state: &GameState<PlayerState>) -> Vec<Node<PlayerState>> {
+    if game_state.player_states[game_state.current_pidx].cards().len() == 0 { return vec![]; }
 
     let played_moves = &game_state.current_moves;
     let player_state = &game_state.player_states[game_state.current_pidx];
 
     let possible_cards = if let Some(first_move) = played_moves.first() {
-        let same_suit_cards: Vec<Card> = player_state.cards.iter().filter(|c| c.suit() == first_move.card().suit()).map(|c| *c).collect();
+        let same_suit_cards: Vec<Card> = player_state.cards().iter().filter(|c| c.suit() == first_move.card().suit()).map(|c| *c).collect();
         if same_suit_cards.len() > 0 {
             same_suit_cards
         } else {
-            let non_scoring_cards: Vec<Card> = player_state.cards.iter().filter(|c| c.score() == 0).map(|c| *c).collect();
-            if player_state.first_round && non_scoring_cards.len() > 0 {
+            let non_scoring_cards: Vec<Card> = player_state.cards().iter().filter(|c| c.score() == 0).map(|c| *c).collect();
+            if player_state.first_round() && non_scoring_cards.len() > 0 {
                 non_scoring_cards
             } else {
-                player_state.cards.clone()
+                player_state.cards().clone()
             }
         }
     } else {
-        if player_state.first_round {
+        if player_state.first_round() {
             vec![Card(Rank::Two, Suit::Clubs)]
         } else {
-            let non_heart_cards: Vec<Card> = player_state.cards.iter().filter(|c| c.suit() != Suit::Hearts).map(|c| *c).collect();
-            if !player_state.hearts_played && non_heart_cards.len() > 0 {
+            let non_heart_cards: Vec<Card> = player_state.cards().iter().filter(|c| c.suit() != Suit::Hearts).map(|c| *c).collect();
+            if !player_state.hearts_played() && non_heart_cards.len() > 0 {
                 non_heart_cards
             } else {
-                player_state.cards.clone()
+                player_state.cards().clone()
             }
         }
     };
@@ -133,7 +124,7 @@ fn initial_vec(game_state: &GameState) -> Vec<Node> {
                       if new_played_moves.len() == 4 {
                           let winning_pidx = crate::internal::round::find_winner_pidx(&new_played_moves);
                           new_player_states.iter_mut().for_each(|s| s.update_end_round(&new_played_moves, winning_pidx));
-                          let result = if new_player_states[game_state.current_pidx].cards.len() == 0 {
+                          let result = if new_player_states[game_state.current_pidx].cards().len() == 0 {
                               Some(new_player_states[game_state.current_pidx].final_scores())
                           } else { None };
                           let new_game_state = GameState {
@@ -157,18 +148,13 @@ fn initial_vec(game_state: &GameState) -> Vec<Node> {
                   }).collect()
 }
 
-fn play_randomly(state: &GameState) -> [isize; 4] {
+fn play_randomly(state: &GameState<DefaultPlayerState>) -> [isize; 4] {
     let mut actors = [
-        RuleActorV1::new_from_player_state(0, &state.player_states[0]),
-        RuleActorV1::new_from_player_state(1, &state.player_states[1]),
-        RuleActorV1::new_from_player_state(2, &state.player_states[2]),
-        RuleActorV1::new_from_player_state(3, &state.player_states[3]),
+        ActorRuleV1::<ExtendedPlayerState>::new_from_player_state(&state.player_states[0]),
+        ActorRuleV1::<ExtendedPlayerState>::new_from_player_state(&state.player_states[1]),
+        ActorRuleV1::<ExtendedPlayerState>::new_from_player_state(&state.player_states[2]),
+        ActorRuleV1::<ExtendedPlayerState>::new_from_player_state(&state.player_states[3]),
     ];
-
-    // for m in &state.current_moves { println!("{}", m.pidx()); }
-    // println!("{}, {}, {}, {}", actors[0].player_state.cards.len(), actors[1].player_state.cards.len(), actors[2].player_state.cards.len(), actors[3].player_state.cards.len());
-    //
-    // HumanActor::pause();
 
     let mut moves = state.current_moves.clone();
     let mut current_pidx = state.current_pidx;
@@ -179,14 +165,14 @@ fn play_randomly(state: &GameState) -> [isize; 4] {
             current_pidx = crate::internal::round::find_winner_pidx(&moves);
             actors.iter_mut().for_each(|actor| actor.end_round(current_pidx, &moves));
             moves = vec![];
-            if actors[0].player_state.cards.len() == 0 { return actors[0].player_state.final_scores(); }
+            if actors[0].player_state.cards().len() == 0 { return actors[0].player_state.final_scores(); }
         } else {
             current_pidx = (current_pidx + 1) % 4;
         }
     }
 }
 
-fn mcts_rec(root: &mut Node) -> [isize; 4] {
+fn mcts_rec(root: &mut Node<DefaultPlayerState>) -> [isize; 4] {
     if root.fully_expanded() {
         let index = root.best_child(root.visits);
         let best_child = root.children_mut().get_mut(index).unwrap();
@@ -215,7 +201,7 @@ fn mcts_rec(root: &mut Node) -> [isize; 4] {
     }
 }
 
-pub fn mcts(game_state: &mut GameState, time: usize) -> Vec<(Card, f32, usize)> {
+pub fn mcts(game_state: &mut GameState<DefaultPlayerState>, time: usize) -> Vec<(Card, f32, usize)> {
     let mut root = Node::new(
         game_state.clone(),
         None,
@@ -223,13 +209,9 @@ pub fn mcts(game_state: &mut GameState, time: usize) -> Vec<(Card, f32, usize)> 
     );
 
     let start_time = SystemTime::now();
-    let mut count: usize = 0;
     while SystemTime::now().duration_since(start_time).unwrap().as_millis() < time as u128 {
         let result = mcts_rec(&mut root);
-        // println!("{:?}", result);
-        // HumanActor::pause();
         root.update(result);
-        count += 1;
     }
 
     root.children.iter().map(|node| (node.last_move.unwrap().card(), node.value, node.visits)).collect()
