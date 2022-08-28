@@ -1,8 +1,8 @@
 use crate::{Card, Suit};
 use crate::rust_actors::player_state::BasicPlayerStateInterface;
-use crate::shared::data::Move;
+use crate::game::data::Move;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BasicPlayerState {
     cards: Vec<Card>,
     first_round: bool,
@@ -53,7 +53,11 @@ impl BasicPlayerStateInterface for BasicPlayerState {
         self.hearts_played = hearts_played
     }
 
-    fn update_play_card(&mut self, _played_moves: &Vec<Move>) {}
+    fn update_play_card(&mut self, played_moves: &Vec<Move>) {
+        if played_moves.into_iter().any(|m| m.card().suit() == Suit::Hearts) {
+            self.hearts_played = true;
+        }
+    }
 
     fn update_did_play_card(&mut self, card: &Card) {
         self.cards.retain(|c| c != card);

@@ -1,5 +1,5 @@
-use crate::shared::actor::Actor;
-use crate::shared::data::{Card, Move};
+use crate::game::actor::Actor;
+use crate::game::data::{Card, Move};
 
 use std::process::{Child, Command, Stdio};
 use std::io::{Read, Write};

@@ -10,7 +10,7 @@ pub enum PassDirection {
     None,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Move(pub usize, pub Card);
 
 #[derive(Debug, Clone)]

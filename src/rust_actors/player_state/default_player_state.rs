@@ -1,25 +1,28 @@
 use crate::Card;
 use crate::rust_actors::player_state::{BasicPlayerStateInterface, DefaultPlayerStateInterface};
 use crate::rust_actors::player_state::basic_player_state::BasicPlayerState;
-use crate::shared::data::Move;
+use crate::game::data::Move;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DefaultPlayerState {
     basic_player_state: BasicPlayerState,
 
     cards_in_game: [[bool; 13]; 4],
     scores: [isize; 4],
+    scored: [bool; 4],
     still_has: [[bool; 4]; 4],
 }
 
 impl DefaultPlayerState {
-    pub fn new(cards: Vec<Card>, first_round: bool, hearts_played: bool, pidx: usize, cards_in_game: [[bool; 13]; 4], scores: [isize; 4], still_has: [[bool; 4]; 4]) -> Self {
-        Self { basic_player_state: BasicPlayerState::new(cards, first_round, hearts_played, pidx), cards_in_game, scores, still_has }
+    pub fn new(cards: Vec<Card>, first_round: bool, hearts_played: bool, pidx: usize, cards_in_game: [[bool; 13]; 4], scores: [isize; 4], scored: [bool; 4], still_has: [[bool; 4]; 4]) -> Self {
+        Self { basic_player_state: BasicPlayerState::new(cards, first_round, hearts_played, pidx), cards_in_game, scores, scored, still_has }
     }
 
     fn update_moves(&mut self, moves: &Vec<Move>) {
+        // println!("Starting update_moves");
         if let Some(Move(_, Card(_, first_suit))) = moves.first() {
             for Move(pidx, Card(rank, suit)) in moves {
+                // println!("strike: {:?} {:?}", rank, suit);
                 self.cards_in_game[suit.to_index()][rank.to_index()] = false;
                 if suit != first_suit { self.still_has[suit.to_index()][*pidx] = false; }
             }
@@ -77,7 +80,11 @@ impl BasicPlayerStateInterface for DefaultPlayerState {
     fn update_end_round(&mut self, played_moves: &Vec<Move>, winner_pidx: usize) {
         self.basic_player_state.update_end_round(played_moves, winner_pidx);
 
-        self.scores[winner_pidx] += played_moves.iter().map(|m| m.card().score()).sum::<isize>();
+        if played_moves.iter().any(|m| m.card().score() != 0) {
+            self.scored[winner_pidx] = true;
+            self.scores[winner_pidx] += played_moves.iter().map(|m| m.card().score()).sum::<isize>();
+        }
+
         self.update_moves(played_moves);
     }
 
@@ -94,6 +101,8 @@ impl DefaultPlayerStateInterface for DefaultPlayerState {
     fn scores(&self) -> &[isize; 4] {
         &self.scores
     }
+
+    fn scored(&self) -> &[bool; 4] { &self.scored }
 
     fn still_has(&self) -> &[[bool; 4]; 4] {
         &self.still_has
@@ -114,6 +123,7 @@ impl std::default::Default for DefaultPlayerState {
             basic_player_state: std::default::Default::default(),
             cards_in_game: [[true; 13]; 4],
             scores: [0; 4],
+            scored: [false; 4],
             still_has: [[true; 4]; 4],
         }
     }

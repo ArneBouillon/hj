@@ -1,33 +1,38 @@
-use crate::rust_actors::actor_mcts_v1::game_state::GameState;
-use crate::shared::data::Move;
-use crate::shared::actor::Actor;
+use crate::game::data::Move;
+use crate::game::actor::Actor;
 use crate::util::non_nan::NonNan;
 
 use std::time::SystemTime;
 use crate::{Card, Rank, ActorRuleV1, Suit, ExtendedPlayerState, DefaultPlayerState};
+use crate::game::game_info::{GameInfo, StopCondition};
+use crate::rust_actors::actor_dummy::ActorDummy;
 use crate::rust_actors::player_state::DefaultPlayerStateInterface;
 use crate::rust_actors::player_state::BasicPlayerStateInterface;
 use crate::rust_actors::player_state::MediasResActor;
+use crate::rust_actors::util;
+use crate::util::deck::find_winner_pidx;
 
 struct Node<PlayerState : DefaultPlayerStateInterface> {
     visits: usize,
     value: f32,
     children: Vec<Node<PlayerState>>,
     children_left: isize,
+    game_info: GameInfo,
     last_move: Option<Move>,
-    state: GameState<PlayerState>,
-    result: Option<[isize; 4]>
+    player_states: [PlayerState; 4],
+    result: Option<[isize; 4]>,
 }
 
 impl<PlayerState : DefaultPlayerStateInterface> Node<PlayerState> {
-    pub fn new(state: GameState<PlayerState>, last_move: Option<Move>, result: Option<[isize; 4]>) -> Node<PlayerState> {
+    pub fn new(game_info: GameInfo, last_move: Option<Move>, player_states: [PlayerState; 4], result: Option<[isize; 4]>) -> Node<PlayerState> {
         Node {
             visits: 0,
             value: 0.,
             children: Vec::new(),
             children_left: -1,
+            game_info,
             last_move,
-            state,
+            player_states,
             result,
         }
     }
@@ -40,8 +45,8 @@ impl<PlayerState : DefaultPlayerStateInterface> Node<PlayerState> {
         &mut self.children
     }
 
-    pub fn state_mut(&mut self) -> &mut GameState<PlayerState> {
-        &mut self.state
+    pub fn game_info_mut(&mut self) -> &mut GameInfo {
+        &mut self.game_info
     }
 
     pub fn best_child(&self, visits: usize) -> usize {
@@ -69,7 +74,7 @@ impl<PlayerState : DefaultPlayerStateInterface> Node<PlayerState> {
 
     pub fn expand(&mut self) -> usize {
         if self.children_left == -1 {
-            self.children = initial_vec(self.state_mut());
+            self.children = initial_vec(&self.game_info, &self.player_states);
             self.children_left = self.children.len() as isize;
         }
 
@@ -79,100 +84,48 @@ impl<PlayerState : DefaultPlayerStateInterface> Node<PlayerState> {
 
     pub fn update(&mut self, result: [isize; 4]) {
         self.visits += 1;
-        self.value += (36 - result[(self.state.current_pidx + 3) % 4]) as f32 / 46.;
+        self.value += (36 - result[(self.game_info.current_pidx() + 3) % 4]) as f32 / 46.;
     }
 }
 
-fn initial_vec<PlayerState : DefaultPlayerStateInterface>(game_state: &GameState<PlayerState>) -> Vec<Node<PlayerState>> {
-    if game_state.player_states[game_state.current_pidx].cards().len() == 0 { return vec![]; }
+fn initial_vec<PlayerState : DefaultPlayerStateInterface>(game_info: &GameInfo, player_states: &[PlayerState; 4]) -> Vec<Node<PlayerState>> {
+    if game_info.hands()[game_info.current_pidx()].cards().len() == 0 { return vec![]; }
 
-    let played_moves = &game_state.current_moves;
-    let player_state = &game_state.player_states[game_state.current_pidx];
-
-    let possible_cards = if let Some(first_move) = played_moves.first() {
-        let same_suit_cards: Vec<Card> = player_state.cards().iter().filter(|c| c.suit() == first_move.card().suit()).map(|c| *c).collect();
-        if same_suit_cards.len() > 0 {
-            same_suit_cards
-        } else {
-            let non_scoring_cards: Vec<Card> = player_state.cards().iter().filter(|c| c.score() == 0).map(|c| *c).collect();
-            if player_state.first_round() && non_scoring_cards.len() > 0 {
-                non_scoring_cards
-            } else {
-                player_state.cards().clone()
-            }
-        }
-    } else {
-        if player_state.first_round() {
-            vec![Card(Rank::Two, Suit::Clubs)]
-        } else {
-            let non_heart_cards: Vec<Card> = player_state.cards().iter().filter(|c| c.suit() != Suit::Hearts).map(|c| *c).collect();
-            if !player_state.hearts_played() && non_heart_cards.len() > 0 {
-                non_heart_cards
-            } else {
-                player_state.cards().clone()
-            }
-        }
-    };
-
+    let possible_cards = util::get_allowed_cards(game_info);
     possible_cards.iter()
                   .map(|card| {
-                      let mut new_player_states = game_state.player_states.clone();
-                      new_player_states[game_state.current_pidx].update_did_play_card(card);
-                      let mut new_played_moves = played_moves.clone();
-                      new_played_moves.push(Move(game_state.current_pidx, *card));
+                      let mut actors = [0, 1, 2, 3].map(|pidx|
+                          ActorDummy::new(
+                              player_states[pidx].clone(),
+                              if game_info.current_pidx() == pidx { Some(*card) } else { None },
+                          )
+                      );
+                      let mut new_game_info = game_info.clone();
+                      new_game_info.play_without_validator(&mut actors.iter_mut().collect::<Vec<&mut ActorDummy<_>>>().try_into().unwrap(), StopCondition::OneMove);
 
-                      if new_played_moves.len() == 4 {
-                          let winning_pidx = crate::internal::round::find_winner_pidx(&new_played_moves);
-                          new_player_states.iter_mut().for_each(|s| s.update_end_round(&new_played_moves, winning_pidx));
-                          let result = if new_player_states[game_state.current_pidx].cards().len() == 0 {
-                              Some(new_player_states[game_state.current_pidx].final_scores())
-                          } else { None };
-                          let new_game_state = GameState {
-                              current_moves: vec![],
-                              current_pidx: winning_pidx,
-                              player_states: new_player_states,
-                          };
-
-                          Node::new(new_game_state, Some(Move(game_state.current_pidx, *card)), result)
-                      } else {
-                          let next_pidx = (game_state.current_pidx + 1) % 4;
-                          new_player_states[next_pidx].update_play_card(&new_played_moves);
-                          let new_game_state = GameState {
-                              current_moves: new_played_moves,
-                              current_pidx: next_pidx,
-                              player_states: new_player_states,
-                          };
-
-                          Node::new(new_game_state, Some(Move(game_state.current_pidx, *card)), None)
-                      }
+                      let result = new_game_info.result();
+                      Node::new(
+                          new_game_info,
+                          Some(Move(game_info.current_pidx(), *card)),
+                          actors.map(|a| a.player_state_move()),
+                          result,
+                      )
                   }).collect()
 }
 
-fn play_randomly(state: &GameState<DefaultPlayerState>) -> [isize; 4] {
+fn play_randomly<PlayerState : DefaultPlayerStateInterface>(root: &Node<PlayerState>) -> [isize; 4] {
+    let mut game_info = root.game_info.clone();
     let mut actors = [
-        ActorRuleV1::<ExtendedPlayerState>::new_from_player_state(&state.player_states[0]),
-        ActorRuleV1::<ExtendedPlayerState>::new_from_player_state(&state.player_states[1]),
-        ActorRuleV1::<ExtendedPlayerState>::new_from_player_state(&state.player_states[2]),
-        ActorRuleV1::<ExtendedPlayerState>::new_from_player_state(&state.player_states[3]),
+        &mut ActorRuleV1::new_from_player_state(&root.player_states[0]),
+        &mut ActorRuleV1::new_from_player_state(&root.player_states[1]),
+        &mut ActorRuleV1::new_from_player_state(&root.player_states[2]),
+        &mut ActorRuleV1::new_from_player_state(&root.player_states[3]),
     ];
-
-    let mut moves = state.current_moves.clone();
-    let mut current_pidx = state.current_pidx;
-    loop {
-        moves.push(Move(current_pidx, actors[current_pidx].play_card(&moves)));
-
-        if moves.len() == 4 {
-            current_pidx = crate::internal::round::find_winner_pidx(&moves);
-            actors.iter_mut().for_each(|actor| actor.end_round(current_pidx, &moves));
-            moves = vec![];
-            if actors[0].player_state.cards().len() == 0 { return actors[0].player_state.final_scores(); }
-        } else {
-            current_pidx = (current_pidx + 1) % 4;
-        }
-    }
+    game_info.play_without_validator(&mut actors, StopCondition::None);
+    game_info.result().unwrap()
 }
 
-fn mcts_rec(root: &mut Node<DefaultPlayerState>) -> [isize; 4] {
+fn mcts_rec<PlayerState : DefaultPlayerStateInterface>(root: &mut Node<PlayerState>) -> [isize; 4] {
     if root.fully_expanded() {
         let index = root.best_child(root.visits);
         let best_child = root.children_mut().get_mut(index).unwrap();
@@ -191,7 +144,7 @@ fn mcts_rec(root: &mut Node<DefaultPlayerState>) -> [isize; 4] {
 
         let result = match new_child.result {
             Some(game_result) => game_result,
-            None => play_randomly(root.state_mut()),
+            None => play_randomly(root),
         };
 
         let new_child = root.children_mut().get_mut(index).unwrap();
@@ -201,10 +154,15 @@ fn mcts_rec(root: &mut Node<DefaultPlayerState>) -> [isize; 4] {
     }
 }
 
-pub fn mcts(game_state: &mut GameState<DefaultPlayerState>, time: usize) -> Vec<(Card, f32, usize)> {
+pub fn mcts<PlayerState : DefaultPlayerStateInterface>(
+    game_info: &GameInfo,
+    player_states: &[PlayerState; 4],
+    time: usize,
+) -> Vec<(Card, f32, usize)> {
     let mut root = Node::new(
-        game_state.clone(),
+        game_info.clone(),
         None,
+        player_states.clone(),
         None,
     );
 

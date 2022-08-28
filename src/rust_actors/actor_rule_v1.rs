@@ -1,7 +1,7 @@
 use iter_fixed::IntoIteratorFixed;
 use crate::{ExtendedPlayerState, PassDirection};
-use crate::shared::actor::Actor;
-use crate::shared::data::{Card, Move, Rank, Suit};
+use crate::game::actor::Actor;
+use crate::game::data::{Card, Move, Rank, Suit};
 use crate::util::non_nan::NonNan;
 
 use itertools::Itertools;
@@ -12,6 +12,7 @@ mod eval_round;
 mod eval_state;
 
 pub struct ActorRuleV1<PlayerState : ExtendedPlayerStateInterface> {
+    dummy: Option<Card>,
     pub player_state: PlayerState,
 }
 
@@ -20,6 +21,7 @@ impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
+            dummy: None,
             player_state: Default::default(),
         }
     }
@@ -101,40 +103,45 @@ impl<PlayerState : ExtendedPlayerStateInterface> Actor for ActorRuleV1<PlayerSta
     fn play_card(&mut self, played_moves: &Vec<Move>) -> Card {
         self.player_state.update_play_card(played_moves);
 
-        let possible_cards = if let Some(first_move) = played_moves.first() {
-            let same_suit_cards: Vec<Card> = self.player_state.cards().iter().filter(|c| c.suit() == first_move.card().suit()).map(|c| *c).collect();
-            if same_suit_cards.len() > 0 {
-                same_suit_cards
-            } else {
-                let non_scoring_cards: Vec<Card> = self.player_state.cards().iter().filter(|c| c.score() == 0).map(|c| *c).collect();
-                if self.player_state.first_round() && non_scoring_cards.len() > 0 {
-                    non_scoring_cards
-                } else {
-                    self.player_state.cards().clone()
-                }
-            }
+        let best_card = if let Some(card) = self.dummy {
+            self.dummy = None;
+            card
         } else {
-            if self.player_state.first_round() {
-                vec![Card(Rank::Two, Suit::Clubs)]
-            } else {
-                let non_heart_cards: Vec<Card> = self.player_state.cards().iter().filter(|c| c.suit() != Suit::Hearts).map(|c| *c).collect();
-                if !self.player_state.hearts_played() && non_heart_cards.len() > 0 {
-                    non_heart_cards
+            let possible_cards = if let Some(first_move) = played_moves.first() {
+                let same_suit_cards: Vec<Card> = self.player_state.cards().iter().filter(|c| c.suit() == first_move.card().suit()).map(|c| *c).collect();
+                if same_suit_cards.len() > 0 {
+                    same_suit_cards
                 } else {
-                    self.player_state.cards().clone()
+                    let non_scoring_cards: Vec<Card> = self.player_state.cards().iter().filter(|c| c.score() == 0).map(|c| *c).collect();
+                    if self.player_state.first_round() && non_scoring_cards.len() > 0 {
+                        non_scoring_cards
+                    } else {
+                        self.player_state.cards().clone()
+                    }
                 }
-            }
+            } else {
+                if self.player_state.first_round() {
+                    vec![Card(Rank::Two, Suit::Clubs)]
+                } else {
+                    let non_heart_cards: Vec<Card> = self.player_state.cards().iter().filter(|c| c.suit() != Suit::Hearts).map(|c| *c).collect();
+                    if !self.player_state.hearts_played() && non_heart_cards.len() > 0 {
+                        non_heart_cards
+                    } else {
+                        self.player_state.cards().clone()
+                    }
+                }
+            };
+
+            *possible_cards.iter().min_by_key(|c| {
+                let mut by_suit = [vec![], vec![], vec![], vec![]];
+                for card in self.player_state.cards() { if card != *c { by_suit[card.suit() as usize - 1].push(*card); } }
+                self.evaluate_round(played_moves, **c).try_add(self.evaluate_state(&by_suit)).unwrap()
+            }).expect("There should always be valid playing options")
         };
 
-        let best_card = possible_cards.iter().min_by_key(|c| {
-            let mut by_suit = [vec![], vec![], vec![], vec![]];
-            for card in self.player_state.cards() { if card != *c { by_suit[card.suit() as usize - 1].push(*card); } }
-            self.evaluate_round(played_moves, **c).try_add(self.evaluate_state(&by_suit)).unwrap()
-        }).expect("There should always be valid playing options");
+        self.player_state.update_did_play_card(&best_card);
 
-        self.player_state.update_did_play_card(best_card);
-
-        *best_card
+        best_card
     }
 
     fn end_round(&mut self, winner_pidx: usize, played_moves: &Vec<Move>) {
@@ -164,7 +171,12 @@ impl<PlayerState : DefaultPlayerStateInterface> MediasResActor<PlayerState> for 
         let opponent_cards_in_game_by_suit = opponent_cards_in_game.into_iter_fixed().map(|a| a.iter().filter(|b| **b).count()).collect();
 
         Self {
-            player_state: ExtendedPlayerState::new(player_state.cards().clone(), player_state.first_round(), player_state.hearts_played(), player_state.pidx(), player_state.cards_in_game().clone(), player_state.scores().clone(), player_state.still_has().clone(), cards_in_game_by_suit, opponent_cards_in_game, opponent_cards_in_game_by_suit),
+            dummy: None,
+            player_state: ExtendedPlayerState::new(player_state.cards().clone(), player_state.first_round(), player_state.hearts_played(), player_state.pidx(), player_state.cards_in_game().clone(), player_state.scores().clone(), player_state.scored().clone(), player_state.still_has().clone(), cards_in_game_by_suit, opponent_cards_in_game, opponent_cards_in_game_by_suit),
         }
+    }
+
+    fn add_dummy(&mut self, card: Card) {
+        self.dummy = Some(card);
     }
 }

@@ -1,12 +1,12 @@
 use crate::Card;
-use crate::shared::actor::Actor;
-use crate::shared::data::Move;
+use crate::game::actor::Actor;
+use crate::game::data::Move;
 
 pub mod basic_player_state;
 pub mod default_player_state;
 pub mod extended_player_state;
 
-pub trait BasicPlayerStateInterface : std::default::Default + Clone {
+pub trait BasicPlayerStateInterface : std::default::Default + Clone + std::fmt::Debug {
     fn pidx(&self) -> usize;
     fn set_pidx(&mut self, pidx: usize);
     fn cards(&self) -> &Vec<Card>;
@@ -26,6 +26,7 @@ pub trait BasicPlayerStateInterface : std::default::Default + Clone {
 pub trait DefaultPlayerStateInterface : BasicPlayerStateInterface {
     fn cards_in_game(&self) -> &[[bool; 13]; 4];
     fn scores(&self) -> &[isize; 4];
+    fn scored(&self) -> &[bool; 4];
     fn still_has(&self) -> &[[bool; 4]; 4];
     fn still_has_mut(&mut self) -> &mut [[bool; 4]; 4];
 
@@ -40,4 +41,5 @@ pub trait ExtendedPlayerStateInterface : DefaultPlayerStateInterface {
 
 pub trait MediasResActor<PlayerState : BasicPlayerStateInterface> : Actor {
     fn new_from_player_state(player_state: &PlayerState) -> Self;
+    fn add_dummy(&mut self, card: Card);
 }

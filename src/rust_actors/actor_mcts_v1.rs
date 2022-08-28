@@ -1,13 +1,12 @@
 use crate::{Card, DefaultPlayerState, PassDirection, Rank, Suit};
-use crate::shared::actor::Actor;
-use crate::shared::data::Move;
+use crate::game::actor::Actor;
+use crate::game::data::Move;
 use crate::util::non_nan::NonNan;
 use itertools::Itertools;
 use itertools::FoldWhile::{Continue, Done};
 
 mod determinize;
 mod eval_state;
-mod game_state;
 mod mcts;
 mod mcts_mod;
 
@@ -119,8 +118,8 @@ impl<T : MediasResActor<DefaultPlayerState>, PlayerState : ExtendedPlayerStateIn
             }).unwrap().0
         } else {
             (0..self.tries).map(|_| {
-                let mut game_state = determinize::determinize(self.player_state.pidx(), &self.player_state, played_moves);
-                mcts::mcts(&mut game_state, self.timeout)
+                let (game_info, player_states) = determinize::determinize(self.player_state.pidx(), &self.player_state, played_moves);
+                mcts::mcts(&game_info, &player_states, self.timeout)
             }).fold(HashMap::<Card, (f32, usize)>::new(), |mut acc, item| {
                 item.iter().for_each(|tup|
                     match acc.get_mut(&tup.0) {

@@ -1,7 +1,7 @@
 use core::clone::Clone;
 use core::iter::IntoIterator;
-use crate::shared::actor::Actor;
-use crate::shared::data::{Card, Move, Rank, Suit};
+use crate::game::actor::Actor;
+use crate::game::data::{Card, Move, Rank, Suit};
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
@@ -85,5 +85,9 @@ impl<PlayerState : BasicPlayerStateInterface> MediasResActor<PlayerState> for Ac
         Self {
             player_state: player_state.clone()
         }
+    }
+
+    fn add_dummy(&mut self, card: Card) {
+        todo!()
     }
 }

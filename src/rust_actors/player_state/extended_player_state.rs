@@ -1,9 +1,9 @@
 use crate::Card;
 use crate::rust_actors::player_state::{BasicPlayerStateInterface, DefaultPlayerStateInterface, ExtendedPlayerStateInterface};
 use crate::rust_actors::player_state::default_player_state::DefaultPlayerState;
-use crate::shared::data::Move;
+use crate::game::data::Move;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ExtendedPlayerState {
     default_player_state: DefaultPlayerState,
 
@@ -13,11 +13,11 @@ pub struct ExtendedPlayerState {
 }
 
 impl ExtendedPlayerState {
-    pub fn new(cards: Vec<Card>, first_round: bool, hearts_played: bool, pidx: usize, cards_in_game: [[bool; 13]; 4], scores: [isize; 4], still_has: [[bool; 4]; 4], cards_in_game_by_suit: [usize; 4],
+    pub fn new(cards: Vec<Card>, first_round: bool, hearts_played: bool, pidx: usize, cards_in_game: [[bool; 13]; 4], scores: [isize; 4], scored: [bool; 4], still_has: [[bool; 4]; 4], cards_in_game_by_suit: [usize; 4],
            opponent_cards_in_game: [[bool; 13]; 4],
            opponent_cards_in_game_by_suit: [usize; 4]) -> Self {
         Self { default_player_state: DefaultPlayerState::new(
-            cards, first_round, hearts_played, pidx, cards_in_game, scores, still_has
+            cards, first_round, hearts_played, pidx, cards_in_game, scores, scored, still_has
         ), cards_in_game_by_suit, opponent_cards_in_game, opponent_cards_in_game_by_suit }
     }
 
@@ -40,6 +40,10 @@ impl DefaultPlayerStateInterface for ExtendedPlayerState {
 
     fn scores(&self) -> &[isize; 4] {
         self.default_player_state.scores()
+    }
+
+    fn scored(&self) -> &[bool; 4] {
+        self.default_player_state.scored()
     }
 
     fn still_has(&self) -> &[[bool; 4]; 4] {

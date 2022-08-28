@@ -1,6 +1,6 @@
 use crate::{Card, Rank, ActorRuleV1, Suit};
 use crate::rust_actors::player_state::ExtendedPlayerStateInterface;
-use crate::shared::data::Move;
+use crate::game::data::Move;
 use crate::util::non_nan::NonNan;
 
 impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {

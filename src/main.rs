@@ -1,7 +1,7 @@
 mod api;
+mod game;
 mod internal;
 mod rust_actors;
-mod shared;
 mod util;
 
 use std::thread;
@@ -12,7 +12,9 @@ use crate::rust_actors::actor_mcts_v1::ActorMCTSV1;
 use crate::rust_actors::actor_rule_v1::ActorRuleV1;
 use crate::rust_actors::player_state::default_player_state::DefaultPlayerState;
 use crate::rust_actors::player_state::extended_player_state::ExtendedPlayerState;
-use crate::shared::data::{Card, PassDirection, Rank, Suit};
+use crate::game::data::{Card, PassDirection, Rank, Suit};
+use crate::rust_actors::actor_random::ActorRandom;
+use crate::rust_actors::player_state::basic_player_state::BasicPlayerState;
 
 fn main() {
     let mut total_scores = [0, 0, 0, 0];
@@ -28,9 +30,13 @@ fn main() {
                     PassDirection::from_round(round_num),
                     [
                         &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
-                        &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
-                        &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
-                        &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
+                        &mut ActorRandom::<BasicPlayerState>::new(),
+                        &mut ActorRandom::<BasicPlayerState>::new(),
+                        &mut ActorRandom::<BasicPlayerState>::new(),
+                        // &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
+                        // &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
+                        // &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
+                        // &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
                     ],
                 ).expect("Errors should not occur.")
             })

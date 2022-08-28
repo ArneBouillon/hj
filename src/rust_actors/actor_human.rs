@@ -1,6 +1,6 @@
 use core::default::Default;
-use crate::shared::actor::Actor;
-use crate::shared::data::{Card, Move, PassDirection};
+use crate::game::actor::Actor;
+use crate::game::data::{Card, Move, PassDirection};
 
 use std::io::Read;
 

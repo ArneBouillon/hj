@@ -1,4 +1,4 @@
-use crate::shared::data::{Move, PassDirection};
+use crate::game::data::{Move, PassDirection};
 use super::data::Card;
 
 pub trait Actor {
