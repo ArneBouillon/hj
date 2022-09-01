@@ -10,9 +10,9 @@ use crate::rust_actors::determinize::{Determinize, determinize_v1};
 use crate::rust_actors::eval_state::EvalState;
 use crate::rust_actors::player_state::{ExtendedPlayerStateInterface, MediasResActor};
 
-mod mcts;
+mod mcts_mod;
 
-pub struct ActorMCTSV1<
+pub struct ActorMCTSModV1<
     D: Determinize,
     ES: EvalState,
     S: MediasResActor<DefaultPlayerState>,
@@ -21,7 +21,6 @@ pub struct ActorMCTSV1<
     player_state: PS,
 
     timeout: usize,
-    tries: usize,
 
     determinize_type: PhantomData<D>,
     eval_state_type: PhantomData<ES>,
@@ -33,14 +32,13 @@ impl<
     ES: EvalState,
     S: MediasResActor<DefaultPlayerState>,
     PS: ExtendedPlayerStateInterface
-> ActorMCTSV1<D, ES, S, PS> {
+> ActorMCTSModV1<D, ES, S, PS> {
     #[allow(dead_code)]
-    pub fn new(timeout: usize, tries: usize) -> Self {
+    pub fn new(timeout: usize) -> Self {
         Self {
             player_state: Default::default(),
 
             timeout,
-            tries,
 
             determinize_type: PhantomData,
             eval_state_type: PhantomData,
@@ -54,7 +52,7 @@ impl<
     ES: EvalState,
     S: MediasResActor<DefaultPlayerState>,
     PS: ExtendedPlayerStateInterface
-> ActorMCTSV1<D, ES, S, PS> {
+> ActorMCTSModV1<D, ES, S, PS> {
     fn add_ghost_cards(cards: &[Vec<Card>; 4], spade_card: Card, club_card: Card, heart_card: Card) -> [Vec<Card>; 4] {
         [
             cards[0].clone().into_iter().chain([spade_card].iter().copied()).collect(),
@@ -126,7 +124,7 @@ impl<
     ES: EvalState,
     S: MediasResActor<DefaultPlayerState>,
     PS: ExtendedPlayerStateInterface
-> Actor for ActorMCTSV1<D, ES, S, PS> {
+> Actor for ActorMCTSModV1<D, ES, S, PS> {
     fn initialize(&mut self, pidx: usize, cards: &Vec<Card>) {
         self.player_state.set_pidx(pidx);
         self.player_state.set_cards(cards.clone());
@@ -135,18 +133,7 @@ impl<
     fn play_card(&mut self, played_moves: &Vec<Move>) -> Card {
         self.player_state.update_play_card(played_moves);
 
-        let best_card = (0..self.tries).map(|_| {
-            let (game_info, player_states) = D::determinize(self.player_state.pidx(), &self.player_state, played_moves);
-            mcts::mcts(&game_info, &player_states, self.timeout)
-        }).fold(HashMap::<Card, (f32, usize)>::new(), |mut acc, item| {
-            item.iter().for_each(|tup|
-                match acc.get_mut(&tup.0) {
-                    Some(entry) => { entry.0 += tup.1; entry.1 += tup.2; },
-                    None => { acc.insert(tup.0, (tup.1, tup.2)); },
-                }
-            );
-            acc
-        }).into_iter().max_by_key(|(_, (value, visits))| {
+        let best_card = mcts_mod::mcts_mod::<D, S, PS>(self.player_state.pidx(), &mut self.player_state, played_moves, self.timeout).into_iter().max_by_key(|(_, value, visits)| {
             NonNan::new(if *visits == 0 { 0. } else { value / *visits as f32 }).unwrap()
         }).unwrap().0;
 

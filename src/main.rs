@@ -14,6 +14,7 @@ use crate::rust_actors::actor_rule_v1::ActorRuleV1;
 use crate::rust_actors::player_state::default_player_state::DefaultPlayerState;
 use crate::rust_actors::player_state::extended_player_state::ExtendedPlayerState;
 use crate::game::data::{Card, PassDirection, Rank, Suit};
+use crate::rust_actors::actor_mcts_mod_v1::ActorMCTSModV1;
 use crate::rust_actors::actor_random::ActorRandom;
 use crate::rust_actors::determinize::determinize_v1::DeterminizeV1;
 use crate::rust_actors::eval_round::eval_round_v1::EvalRoundV1;
@@ -33,7 +34,7 @@ fn main() {
                     hands,
                     PassDirection::from_round(round_num),
                     [
-                        &mut ActorMCTSV1::<DeterminizeV1, EvalStateV1, ActorRuleV1<EvalRoundV1, EvalStateV1, ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
+                        &mut ActorMCTSModV1::<DeterminizeV1, EvalStateV1, ActorRuleV1<EvalRoundV1, EvalStateV1, ExtendedPlayerState>, ExtendedPlayerState>::new(50),
                         &mut ActorRandom::<BasicPlayerState>::new(),
                         &mut ActorRandom::<BasicPlayerState>::new(),
                         &mut JSONActor::new("/home/arne/repos/hj/src/json_actors/random_actor.py".to_owned()),
