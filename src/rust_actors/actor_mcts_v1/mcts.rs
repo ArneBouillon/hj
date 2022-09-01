@@ -12,19 +12,19 @@ use crate::rust_actors::player_state::MediasResActor;
 use crate::rust_actors::util;
 use crate::util::deck::find_winner_pidx;
 
-struct Node<PlayerState: DefaultPlayerStateInterface> {
+struct Node {
     visits: usize,
     value: f32,
-    children: Vec<Node<PlayerState>>,
+    children: Vec<Node>,
     children_left: isize,
     game_info: GameInfo,
     last_move: Option<Move>,
-    player_states: [PlayerState; 4],
+    player_states: [DefaultPlayerState; 4],
     result: Option<[isize; 4]>,
 }
 
-impl<PlayerState: DefaultPlayerStateInterface> Node<PlayerState> {
-    pub fn new(game_info: GameInfo, last_move: Option<Move>, player_states: [PlayerState; 4], result: Option<[isize; 4]>) -> Node<PlayerState> {
+impl Node {
+    pub fn new(game_info: GameInfo, last_move: Option<Move>, player_states: [DefaultPlayerState; 4], result: Option<[isize; 4]>) -> Node {
         Node {
             visits: 0,
             value: 0.,
@@ -37,11 +37,11 @@ impl<PlayerState: DefaultPlayerStateInterface> Node<PlayerState> {
         }
     }
 
-    pub fn children(&self) -> &Vec<Node<PlayerState>> {
+    pub fn children(&self) -> &Vec<Node> {
         &self.children
     }
 
-    pub fn children_mut(&mut self) -> &mut Vec<Node<PlayerState>> {
+    pub fn children_mut(&mut self) -> &mut Vec<Node> {
         &mut self.children
     }
 
@@ -88,7 +88,7 @@ impl<PlayerState: DefaultPlayerStateInterface> Node<PlayerState> {
     }
 }
 
-fn initial_vec<PlayerState: DefaultPlayerStateInterface>(game_info: &GameInfo, player_states: &[PlayerState; 4]) -> Vec<Node<PlayerState>> {
+fn initial_vec(game_info: &GameInfo, player_states: &[DefaultPlayerState; 4]) -> Vec<Node> {
     if game_info.hands()[game_info.current_pidx()].cards().len() == 0 { return vec![]; }
 
     let possible_cards = util::get_allowed_cards(game_info);
@@ -113,26 +113,26 @@ fn initial_vec<PlayerState: DefaultPlayerStateInterface>(game_info: &GameInfo, p
                   }).collect()
 }
 
-fn play_randomly<PlayerState: DefaultPlayerStateInterface>(root: &Node<PlayerState>) -> [isize; 4] {
+fn play_randomly<S: MediasResActor<DefaultPlayerState>>(root: &Node) -> [isize; 4] {
     let mut game_info = root.game_info.clone();
     let mut actors = [
-        &mut ActorRuleV1::<EvalRoundV1, EvalStateV1, _>::new_from_player_state(&root.player_states[0]),
-        &mut ActorRuleV1::<EvalRoundV1, EvalStateV1, _>::new_from_player_state(&root.player_states[1]),
-        &mut ActorRuleV1::<EvalRoundV1, EvalStateV1, _>::new_from_player_state(&root.player_states[2]),
-        &mut ActorRuleV1::<EvalRoundV1, EvalStateV1, _>::new_from_player_state(&root.player_states[3]),
+        &mut S::new_from_player_state(&root.player_states[0]),
+        &mut S::new_from_player_state(&root.player_states[1]),
+        &mut S::new_from_player_state(&root.player_states[2]),
+        &mut S::new_from_player_state(&root.player_states[3]),
     ];
     game_info.play_without_validator(&mut actors, StopCondition::None);
     game_info.result().unwrap()
 }
 
-fn mcts_rec<PlayerState: DefaultPlayerStateInterface>(root: &mut Node<PlayerState>) -> [isize; 4] {
+fn mcts_rec<S: MediasResActor<DefaultPlayerState>>(root: &mut Node) -> [isize; 4] {
     if root.fully_expanded() {
         let index = root.best_child(root.visits);
         let best_child = root.children_mut().get_mut(index).unwrap();
 
         let result = match best_child.result {
             Some(game_result) => game_result,
-            None => mcts_rec(best_child),
+            None => mcts_rec::<S>(best_child),
         };
 
         best_child.update(result);
@@ -144,7 +144,7 @@ fn mcts_rec<PlayerState: DefaultPlayerStateInterface>(root: &mut Node<PlayerStat
 
         let result = match new_child.result {
             Some(game_result) => game_result,
-            None => play_randomly(root),
+            None => play_randomly::<S>(root),
         };
 
         let new_child = root.children_mut().get_mut(index).unwrap();
@@ -154,9 +154,9 @@ fn mcts_rec<PlayerState: DefaultPlayerStateInterface>(root: &mut Node<PlayerStat
     }
 }
 
-pub fn mcts<PlayerState: DefaultPlayerStateInterface>(
+pub fn mcts<S: MediasResActor<DefaultPlayerState>>(
     game_info: &GameInfo,
-    player_states: &[PlayerState; 4],
+    player_states: &[DefaultPlayerState; 4],
     time: usize,
 ) -> Vec<(Card, f32, usize)> {
     let mut root = Node::new(
@@ -168,7 +168,7 @@ pub fn mcts<PlayerState: DefaultPlayerStateInterface>(
 
     let start_time = SystemTime::now();
     while SystemTime::now().duration_since(start_time).unwrap().as_millis() < time as u128 {
-        let result = mcts_rec(&mut root);
+        let result = mcts_rec::<S>(&mut root);
         root.update(result);
     }
 
