@@ -4,9 +4,11 @@ use crate::util::non_nan::NonNan;
 use iter_fixed::IntoIteratorFixed;
 use std::cmp::Reverse;
 use rand::Rng;
-use crate::rust_actors::player_state::ExtendedPlayerStateInterface;
+use crate::rust_actors::eval_state::EvalState;
+use crate::rust_actors::player_state::{DefaultPlayerStateInterface, ExtendedPlayerStateInterface};
 
-impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
+pub struct EvalStateV1;
+impl EvalStateV1 {
     fn eval_ranks(ranks: &Vec<Rank>, all_ranks: &Vec<Rank>) -> (f32, Vec<f32>) {
         if ranks.len() == all_ranks.len() { return (0., vec![]); }
 
@@ -59,7 +61,9 @@ impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
         }
     }
 
-    fn eval_state_spades(&self, cards: &Vec<Card>) -> (f32, f32, Vec<f32>) {
+    fn eval_state_spades<
+        PS: DefaultPlayerStateInterface
+    >(player_state: &PS, cards: &Vec<Card>) -> (f32, f32, Vec<f32>) {
         if cards.is_empty() {
             return (0., 0., vec![]);
         }
@@ -98,7 +102,9 @@ impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
         (cost, cards.len() as f32, empty_costs)
     }
 
-    fn eval_state_clubs(&self, cards: &Vec<Card>) -> (f32, f32, Vec<f32>) {
+    fn eval_state_clubs<
+        PS: DefaultPlayerStateInterface
+    >(player_state: &PS, cards: &Vec<Card>) -> (f32, f32, Vec<f32>) {
         if cards.is_empty() {
             return (0., 0., vec![]);
         }
@@ -108,7 +114,7 @@ impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
         let have_two = cards.len() != cards_no_two.len();
 
         let ranks: Vec<Rank> = cards_no_two.iter().map(|c| c.rank()).collect();
-        let mut all_ranks: Vec<Rank> = self.player_state.cards_in_game()[1].iter().enumerate().filter_map(|(i, r)| if *r { Some(Rank::from_index(i as u8)) } else { None }).collect(); //Rank::all().into_iter().collect();
+        let mut all_ranks: Vec<Rank> = player_state.cards_in_game()[1].iter().enumerate().filter_map(|(i, r)| if *r { Some(Rank::from_index(i as u8)) } else { None }).collect(); //Rank::all().into_iter().collect();
         if have_two {
             all_ranks.remove(0);
             let mut counter = 3;
@@ -126,13 +132,15 @@ impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
         (cost, cards.len() as f32, empty_costs)
     }
 
-    fn eval_state_diamonds(&self, cards: &Vec<Card>) -> (f32, f32, Vec<f32>) {
+    fn eval_state_diamonds<
+        PS: DefaultPlayerStateInterface
+    >(player_state: &PS, cards: &Vec<Card>) -> (f32, f32, Vec<f32>) {
         if cards.is_empty() {
             return (0., 0., vec![]);
         }
 
         let ranks: Vec<Rank> = cards.iter().map(|c| c.rank()).collect();
-        let all_ranks: Vec<Rank> = self.player_state.cards_in_game()[2].iter().enumerate().filter_map(|(i, r)| if *r { Some(Rank::from_index(i as u8)) } else { None }).collect(); //Rank::all().into_iter().collect();
+        let all_ranks: Vec<Rank> = player_state.cards_in_game()[2].iter().enumerate().filter_map(|(i, r)| if *r { Some(Rank::from_index(i as u8)) } else { None }).collect(); //Rank::all().into_iter().collect();
 
         let (wins, empty_costs) = Self::eval_ranks(&ranks, &all_ranks);
         let cost = wins + Self::jack_of_diamonds_cost(&ranks, &all_ranks);
@@ -140,26 +148,32 @@ impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
         (cost, cards.len() as f32, empty_costs)
     }
 
-    fn eval_state_hearts(&self, cards: &Vec<Card>) -> (f32, f32, Vec<f32>) {
+    fn eval_state_hearts<
+        PS: DefaultPlayerStateInterface
+    >(player_state: &PS, cards: &Vec<Card>) -> (f32, f32, Vec<f32>) {
         if cards.is_empty() {
             return (0., 0., vec![]);
         }
 
         let ranks: Vec<Rank> = cards.iter().map(|c| c.rank()).collect();
-        let all_ranks: Vec<Rank> = self.player_state.cards_in_game()[3].iter().enumerate().filter_map(|(i, r)| if *r { Some(Rank::from_index(i as u8)) } else { None }).collect();
+        let all_ranks: Vec<Rank> = player_state.cards_in_game()[3].iter().enumerate().filter_map(|(i, r)| if *r { Some(Rank::from_index(i as u8)) } else { None }).collect();
 
         let (wins, empty_costs) = Self::eval_ranks(&ranks, &all_ranks);
         let cost = wins * 4.;
 
         (cost, cards.len() as f32, empty_costs)
     }
+}
 
-    pub fn evaluate_state(&self, by_suit: &[Vec<Card>; 4]) -> NonNan {
+impl<
+    PS: DefaultPlayerStateInterface
+> EvalState<PS> for EvalStateV1 {
+    fn evaluate_state(player_state: &PS, by_suit: &[Vec<Card>; 4]) -> NonNan {
         let suit_results = [
-            self.eval_state_spades(&by_suit[0]),
-            self.eval_state_clubs(&by_suit[1]),
-            self.eval_state_diamonds(&by_suit[2]),
-            self.eval_state_hearts(&by_suit[3]),
+            Self::eval_state_spades(player_state, &by_suit[0]),
+            Self::eval_state_clubs(player_state, &by_suit[1]),
+            Self::eval_state_diamonds(player_state, &by_suit[2]),
+            Self::eval_state_hearts(player_state, &by_suit[3]),
         ];
 
         let mut total_score = suit_results[0].0 + suit_results[1].0 + suit_results[2].0 + suit_results[3].0;

@@ -8,19 +8,19 @@ use rand::thread_rng;
 use crate::PassDirection;
 use crate::rust_actors::player_state::{BasicPlayerStateInterface, MediasResActor};
 
-pub struct ActorRandom<PlayerState : BasicPlayerStateInterface> {
+pub struct ActorRandom<PlayerState: BasicPlayerStateInterface> {
     pub player_state: PlayerState,
 }
 
 
-impl<PlayerState : BasicPlayerStateInterface> ActorRandom<PlayerState> {
+impl<PlayerState: BasicPlayerStateInterface> ActorRandom<PlayerState> {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self { player_state: Default::default() }
     }
 }
 
-impl<PlayerState : BasicPlayerStateInterface> Actor for ActorRandom<PlayerState> {
+impl<PlayerState: BasicPlayerStateInterface> Actor for ActorRandom<PlayerState> {
     fn initialize(&mut self, pidx: usize, cards: &Vec<Card>) {
         self.player_state.set_pidx(pidx);
         self.player_state.set_cards(cards.clone());
@@ -80,7 +80,7 @@ impl<PlayerState : BasicPlayerStateInterface> Actor for ActorRandom<PlayerState>
     }
 }
 
-impl<PlayerState : BasicPlayerStateInterface> MediasResActor<PlayerState> for ActorRandom<PlayerState> {
+impl<PlayerState: BasicPlayerStateInterface> MediasResActor<PlayerState> for ActorRandom<PlayerState> {
     fn new_from_player_state(player_state: &PlayerState) -> Self {
         Self {
             player_state: player_state.clone()

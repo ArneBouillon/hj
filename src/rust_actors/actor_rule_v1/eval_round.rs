@@ -1,9 +1,10 @@
 use crate::{Card, Rank, ActorRuleV1, Suit};
 use crate::rust_actors::player_state::ExtendedPlayerStateInterface;
 use crate::game::data::Move;
+use crate::rust_actors::eval_state::EvalState;
 use crate::util::non_nan::NonNan;
 
-impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
+impl<ES: EvalState<PS>, PS: ExtendedPlayerStateInterface> ActorRuleV1<ES, PS> {
     pub(super) fn evaluate_round(&self, played_moves: &Vec<Move>, new_card: Card) -> NonNan {
         let Card(new_rank, new_suit) = new_card;
         if let Some(Move(_, Card(first_rank, first_suit))) = played_moves.first() {

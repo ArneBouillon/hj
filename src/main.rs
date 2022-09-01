@@ -7,6 +7,7 @@ mod util;
 use std::thread;
 
 use iter_fixed::IntoIteratorFixed;
+use crate::api::json::JSONActor;
 
 use crate::rust_actors::actor_mcts_v1::ActorMCTSV1;
 use crate::rust_actors::actor_rule_v1::ActorRuleV1;
@@ -14,12 +15,14 @@ use crate::rust_actors::player_state::default_player_state::DefaultPlayerState;
 use crate::rust_actors::player_state::extended_player_state::ExtendedPlayerState;
 use crate::game::data::{Card, PassDirection, Rank, Suit};
 use crate::rust_actors::actor_random::ActorRandom;
+use crate::rust_actors::determinize::determinize_v1::DeterminizeV1;
+use crate::rust_actors::eval_state::eval_state_v1::EvalStateV1;
 use crate::rust_actors::player_state::basic_player_state::BasicPlayerState;
 
 fn main() {
     let mut total_scores = [0, 0, 0, 0];
 
-    for round_num in (0..1000).step_by(1) {
+    for round_num in (0..100).step_by(1) {
         let base_hands = util::deck::get_shuffled_hands();
 
         let handles: Vec<_> = (0..1).map(|player_shift| {
@@ -29,14 +32,10 @@ fn main() {
                     hands,
                     PassDirection::from_round(round_num),
                     [
-                        &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
+                        &mut ActorMCTSV1::<DeterminizeV1, EvalStateV1, ActorRuleV1<EvalStateV1, ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
                         &mut ActorRandom::<BasicPlayerState>::new(),
                         &mut ActorRandom::<BasicPlayerState>::new(),
-                        &mut ActorRandom::<BasicPlayerState>::new(),
-                        // &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
-                        // &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
-                        // &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
-                        // &mut ActorMCTSV1::<ActorRuleV1<ExtendedPlayerState>, ExtendedPlayerState>::new(true, 50, 1),
+                        &mut JSONActor::new("/home/arne/repos/hj/src/json_actors/random_actor.py".to_owned()),
                     ],
                 ).expect("Errors should not occur.")
             })

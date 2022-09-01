@@ -4,25 +4,38 @@ use crate::game::data::Move;
 use crate::util::non_nan::NonNan;
 use itertools::Itertools;
 use itertools::FoldWhile::{Continue, Done};
+use std::marker::PhantomData;
+use std::collections::HashMap;
+use crate::rust_actors::determinize::{Determinize, determinize_v1};
+use crate::rust_actors::eval_state::EvalState;
+use crate::rust_actors::player_state::{ExtendedPlayerStateInterface, MediasResActor};
 
-mod determinize;
-mod eval_state;
 mod mcts;
 mod mcts_mod;
 
-use std::collections::HashMap;
-use crate::rust_actors::player_state::{ExtendedPlayerStateInterface, MediasResActor};
-
-pub struct ActorMCTSV1<T: MediasResActor<DefaultPlayerState>, PlayerState : ExtendedPlayerStateInterface> {
-    player_state: PlayerState,
+pub struct ActorMCTSV1<
+    D: Determinize<PS>,
+    ES: EvalState<PS>,
+    S: MediasResActor<DefaultPlayerState>,
+    PS: ExtendedPlayerStateInterface
+> {
+    player_state: PS,
 
     newtype: bool,
     timeout: usize,
     tries: usize,
-    sub_actors: Option<T>,
+
+    determinize_type: PhantomData<D>,
+    eval_state_type: PhantomData<ES>,
+    sub_actor_type: PhantomData<S>,
 }
 
-impl<T : MediasResActor<DefaultPlayerState>, PlayerState : ExtendedPlayerStateInterface> ActorMCTSV1<T, PlayerState> {
+impl<
+    D: Determinize<PS>,
+    ES: EvalState<PS>,
+    S: MediasResActor<DefaultPlayerState>,
+    PS: ExtendedPlayerStateInterface
+> ActorMCTSV1<D, ES, S, PS> {
     #[allow(dead_code)]
     pub fn new(newtype: bool, timeout: usize, tries: usize) -> Self {
         Self {
@@ -31,12 +44,20 @@ impl<T : MediasResActor<DefaultPlayerState>, PlayerState : ExtendedPlayerStateIn
             newtype,
             timeout,
             tries,
-            sub_actors: None,
+
+            determinize_type: PhantomData,
+            eval_state_type: PhantomData,
+            sub_actor_type: PhantomData,
         }
     }
 }
 
-impl<T : MediasResActor<DefaultPlayerState>, PlayerState : ExtendedPlayerStateInterface> ActorMCTSV1<T, PlayerState> {
+impl<
+    D: Determinize<PS>,
+    ES: EvalState<PS>,
+    S: MediasResActor<DefaultPlayerState>,
+    PS: ExtendedPlayerStateInterface
+> ActorMCTSV1<D, ES, S, PS> {
     fn add_ghost_cards(cards: &[Vec<Card>; 4], spade_card: Card, club_card: Card, heart_card: Card) -> [Vec<Card>; 4] {
         [
             cards[0].clone().into_iter().chain([spade_card].iter().copied()).collect(),
@@ -79,7 +100,7 @@ impl<T : MediasResActor<DefaultPlayerState>, PlayerState : ExtendedPlayerStateIn
             if item.rank() as u8 == acc { Continue(acc - 1) } else { Done(acc) }
         ).into_inner()).unwrap(), Suit::Hearts);
 
-        let best_option: Vec<Card> = ActorMCTSV1::<T, PlayerState>::divide_three().iter().filter_map(|division| {
+        let best_option: Vec<Card> = Self::divide_three().iter().filter_map(|division| {
             if division.iter().zip(by_suit_counts).any(|(d, c)| *d > c) {
                 None
             } else {
@@ -92,8 +113,8 @@ impl<T : MediasResActor<DefaultPlayerState>, PlayerState : ExtendedPlayerStateIn
             }
         }).min_by_key(|cards|
             NonNan::new(
-                0.2 * self.evaluate_state(&ActorMCTSV1::<T, PlayerState>::add_ghost_cards(cards, spade_card, club_card, heart_card)).value()
-                    + 0.8 * self.evaluate_state(&cards).value()
+                0.2 * ES::evaluate_state(&self.player_state, &Self::add_ghost_cards(cards, spade_card, club_card, heart_card)).value()
+                    + 0.8 * ES::evaluate_state(&self.player_state, &cards).value()
             ).unwrap()
         ).expect("There should always be valid passing options").into_iter().flatten().collect();
 
@@ -103,7 +124,12 @@ impl<T : MediasResActor<DefaultPlayerState>, PlayerState : ExtendedPlayerStateIn
     }
 }
 
-impl<T : MediasResActor<DefaultPlayerState>, PlayerState : ExtendedPlayerStateInterface> Actor for ActorMCTSV1<T, PlayerState> {
+impl<
+    D: Determinize<PS>,
+    ES: EvalState<PS>,
+    S: MediasResActor<DefaultPlayerState>,
+    PS: ExtendedPlayerStateInterface
+> Actor for ActorMCTSV1<D, ES, S, PS> {
     fn initialize(&mut self, pidx: usize, cards: &Vec<Card>) {
         self.player_state.set_pidx(pidx);
         self.player_state.set_cards(cards.clone());
@@ -113,12 +139,12 @@ impl<T : MediasResActor<DefaultPlayerState>, PlayerState : ExtendedPlayerStateIn
         self.player_state.update_play_card(played_moves);
 
         let best_card = if self.newtype {
-            mcts_mod::mcts_mod::<T, PlayerState>(self.player_state.pidx(), &mut self.player_state, played_moves, self.timeout).into_iter().max_by_key(|(_, value, visits)| {
+            mcts_mod::mcts_mod::<D, S, PS>(self.player_state.pidx(), &mut self.player_state, played_moves, self.timeout).into_iter().max_by_key(|(_, value, visits)| {
                 NonNan::new(if *visits == 0 { 0. } else { value / *visits as f32 }).unwrap()
             }).unwrap().0
         } else {
             (0..self.tries).map(|_| {
-                let (game_info, player_states) = determinize::determinize(self.player_state.pidx(), &self.player_state, played_moves);
+                let (game_info, player_states) = D::determinize(self.player_state.pidx(), &self.player_state, played_moves);
                 mcts::mcts(&game_info, &player_states, self.timeout)
             }).fold(HashMap::<Card, (f32, usize)>::new(), |mut acc, item| {
                 item.iter().for_each(|tup|

@@ -81,3 +81,5 @@ while True:
     with open('temp.txt', 'w+') as file:
         file.write(string)
     subprocess.run(['cat', 'temp.txt'])
+    if message['message'] == 'end_game':
+        exit()

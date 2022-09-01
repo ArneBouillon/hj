@@ -9,7 +9,7 @@ use num;
 use crate::PassDirection;
 
 pub struct JSONActor {
-    child : Child,
+    child: Child,
 }
 
 impl JSONActor {
@@ -38,7 +38,6 @@ impl JSONActor {
 
 impl Actor for JSONActor {
     fn initialize(&mut self, pidx: usize, cards: &Vec<Card>) {
-        println!("Initializing");
         let message = json::object!{
             message: "initialize",
             pidx: pidx,

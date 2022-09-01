@@ -3,31 +3,44 @@ use crate::{ExtendedPlayerState, PassDirection};
 use crate::game::actor::Actor;
 use crate::game::data::{Card, Move, Rank, Suit};
 use crate::util::non_nan::NonNan;
+use std::marker::PhantomData;
 
 use itertools::Itertools;
 use itertools::FoldWhile::{Continue, Done};
+use crate::rust_actors::eval_state::EvalState;
 use crate::rust_actors::player_state::{DefaultPlayerStateInterface, ExtendedPlayerStateInterface, MediasResActor};
 
 mod eval_round;
-mod eval_state;
 
-pub struct ActorRuleV1<PlayerState : ExtendedPlayerStateInterface> {
+pub struct ActorRuleV1<
+    ES: EvalState<PS>,
+    PS: ExtendedPlayerStateInterface
+> {
     dummy: Option<Card>,
-    pub player_state: PlayerState,
+    pub player_state: PS,
+
+    eval_state_type: PhantomData<ES>,
 }
 
-
-impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
+impl<
+    ES: EvalState<PS>,
+    PS: ExtendedPlayerStateInterface
+> ActorRuleV1<ES, PS> {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             dummy: None,
             player_state: Default::default(),
+
+            eval_state_type: PhantomData,
         }
     }
 }
 
-impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
+impl<
+    ES: EvalState<PS>,
+    PS: ExtendedPlayerStateInterface
+> ActorRuleV1<ES, PS> {
     fn add_ghost_cards(cards: &[Vec<Card>; 4], spade_card: Card, club_card: Card, heart_card: Card) -> [Vec<Card>; 4] {
         [
             cards[0].clone().into_iter().chain([spade_card].iter().copied()).collect(),
@@ -83,8 +96,8 @@ impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
             }
         }).min_by_key(|cards|
             NonNan::new(
-                0.2 * self.evaluate_state(&Self::add_ghost_cards(cards, spade_card, club_card, heart_card)).value()
-                    + 0.8 * self.evaluate_state(&cards).value()
+                0.2 * ES::evaluate_state(&self.player_state, &Self::add_ghost_cards(cards, spade_card, club_card, heart_card)).value()
+                    + 0.8 * ES::evaluate_state(&self.player_state, &cards).value()
             ).unwrap()
         ).expect("There should always be valid passing options").into_iter().flatten().collect();
 
@@ -94,7 +107,10 @@ impl<PlayerState : ExtendedPlayerStateInterface> ActorRuleV1<PlayerState> {
     }
 }
 
-impl<PlayerState : ExtendedPlayerStateInterface> Actor for ActorRuleV1<PlayerState> {
+impl<
+    ES: EvalState<PS>,
+    PS: ExtendedPlayerStateInterface
+> Actor for ActorRuleV1<ES, PS> {
     fn initialize(&mut self, pidx: usize, cards: &Vec<Card>) {
         self.player_state.set_pidx(pidx);
         self.player_state.set_cards(cards.clone());
@@ -135,7 +151,7 @@ impl<PlayerState : ExtendedPlayerStateInterface> Actor for ActorRuleV1<PlayerSta
             *possible_cards.iter().min_by_key(|c| {
                 let mut by_suit = [vec![], vec![], vec![], vec![]];
                 for card in self.player_state.cards() { if card != *c { by_suit[card.suit() as usize - 1].push(*card); } }
-                self.evaluate_round(played_moves, **c).try_add(self.evaluate_state(&by_suit)).unwrap()
+                self.evaluate_round(played_moves, **c).try_add(ES::evaluate_state(&self.player_state, &by_suit)).unwrap()
             }).expect("There should always be valid playing options")
         };
 
@@ -163,8 +179,8 @@ impl<PlayerState : ExtendedPlayerStateInterface> Actor for ActorRuleV1<PlayerSta
     }
 }
 
-impl<PlayerState : DefaultPlayerStateInterface> MediasResActor<PlayerState> for ActorRuleV1<ExtendedPlayerState> {
-    fn new_from_player_state(player_state: &PlayerState) -> Self {
+impl<ES: EvalState<ExtendedPlayerState>, PS: DefaultPlayerStateInterface> MediasResActor<PS> for ActorRuleV1<ES, ExtendedPlayerState> {
+    fn new_from_player_state(player_state: &PS) -> Self {
         let cards_in_game_by_suit = player_state.cards_in_game().into_iter_fixed().map(|a| a.iter().filter(|b| **b).count()).collect();
         let mut opponent_cards_in_game = player_state.cards_in_game().clone();
         for card in player_state.cards() { opponent_cards_in_game[card.suit().to_index()][card.rank().to_index()] = false; }
@@ -173,6 +189,8 @@ impl<PlayerState : DefaultPlayerStateInterface> MediasResActor<PlayerState> for 
         Self {
             dummy: None,
             player_state: ExtendedPlayerState::new(player_state.cards().clone(), player_state.first_round(), player_state.hearts_played(), player_state.pidx(), player_state.cards_in_game().clone(), player_state.scores().clone(), player_state.scored().clone(), player_state.still_has().clone(), cards_in_game_by_suit, opponent_cards_in_game, opponent_cards_in_game_by_suit),
+
+            eval_state_type: PhantomData,
         }
     }
 

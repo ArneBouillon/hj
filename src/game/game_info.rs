@@ -116,7 +116,7 @@ impl GameInfo {
         }
     }
 
-    pub fn pass<V : Validator, T : Actor + ?Sized>(&mut self, direction: PassDirection, actors: &mut [&mut T; 4]) -> Result<(), HJError> {
+    pub fn pass<V: Validator, T: Actor + ?Sized>(&mut self, direction: PassDirection, actors: &mut [&mut T; 4]) -> Result<(), HJError> {
         let passed_cards: [Vec<Card>; 4] = [0, 1, 2, 3].map(|pidx|
             actors[pidx].get_pass(direction)
         );
@@ -128,7 +128,7 @@ impl GameInfo {
         Ok(())
     }
 
-    pub fn play<V : Validator, T : Actor + ?Sized>(&mut self, actors: &mut [&mut T; 4], stop: StopCondition) -> Result<(), HJError> {
+    pub fn play<V: Validator, T: Actor + ?Sized>(&mut self, actors: &mut [&mut T; 4], stop: StopCondition) -> Result<(), HJError> {
         let mut done_move = false;
 
         while self.current_round < 13 {
@@ -153,10 +153,11 @@ impl GameInfo {
         }
 
         self.did_play_game();
+        for actor in actors.iter_mut() { actor.end_game(self.result().unwrap()); }
         Ok(())
     }
 
-    pub fn play_without_validator<T : Actor + ?Sized>(&mut self, actors: &mut [&mut T; 4], stop: StopCondition) {
-        self.play::<HJValidator, T>(actors, stop).expect("Without a validator, no error should occur."); // TODO: No validator
+    pub fn play_without_validator<T: Actor + ?Sized>(&mut self, actors: &mut [&mut T; 4], stop: StopCondition) {
+        self.play::<NoValidator, T>(actors, stop).expect("Without a validator, no error should occur."); // TODO: No validator
     }
 }

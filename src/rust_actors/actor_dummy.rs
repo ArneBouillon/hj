@@ -4,12 +4,12 @@ use crate::game::data::Move;
 use crate::rust_actors::player_state::BasicPlayerStateInterface;
 
 #[derive(Debug)]
-pub struct ActorDummy<PlayerState : BasicPlayerStateInterface> {
+pub struct ActorDummy<PlayerState: BasicPlayerStateInterface> {
     player_state: PlayerState,
     next_card: Option<Card>,
 }
 
-impl<PlayerState : BasicPlayerStateInterface> ActorDummy<PlayerState> {
+impl<PlayerState: BasicPlayerStateInterface> ActorDummy<PlayerState> {
     pub fn new(player_state: PlayerState, next_card: Option<Card>) -> Self {
         Self { next_card, player_state }
     }
@@ -19,7 +19,7 @@ impl<PlayerState : BasicPlayerStateInterface> ActorDummy<PlayerState> {
     }
 }
 
-impl<PlayerState : BasicPlayerStateInterface> Actor for ActorDummy<PlayerState> {
+impl<PlayerState: BasicPlayerStateInterface> Actor for ActorDummy<PlayerState> {
     fn initialize(&mut self, _pidx: usize, _cards: &Vec<Card>) {
         panic!("Dummy actors should never receive #initialize");
     }
