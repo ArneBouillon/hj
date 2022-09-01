@@ -3,7 +3,7 @@ use crate::game::actor::Actor;
 use crate::util::non_nan::NonNan;
 
 use std::time::SystemTime;
-use crate::{Card, Rank, ActorRuleV1, Suit, ExtendedPlayerState, DefaultPlayerState, EvalStateV1};
+use crate::{Card, Rank, ActorRuleV1, Suit, ExtendedPlayerState, DefaultPlayerState, EvalStateV1, EvalRoundV1};
 use crate::game::game_info::{GameInfo, StopCondition};
 use crate::rust_actors::actor_dummy::ActorDummy;
 use crate::rust_actors::player_state::DefaultPlayerStateInterface;
@@ -116,10 +116,10 @@ fn initial_vec<PlayerState: DefaultPlayerStateInterface>(game_info: &GameInfo, p
 fn play_randomly<PlayerState: DefaultPlayerStateInterface>(root: &Node<PlayerState>) -> [isize; 4] {
     let mut game_info = root.game_info.clone();
     let mut actors = [
-        &mut ActorRuleV1::<EvalStateV1, _>::new_from_player_state(&root.player_states[0]),
-        &mut ActorRuleV1::<EvalStateV1, _>::new_from_player_state(&root.player_states[1]),
-        &mut ActorRuleV1::<EvalStateV1, _>::new_from_player_state(&root.player_states[2]),
-        &mut ActorRuleV1::<EvalStateV1, _>::new_from_player_state(&root.player_states[3]),
+        &mut ActorRuleV1::<EvalRoundV1, EvalStateV1, _>::new_from_player_state(&root.player_states[0]),
+        &mut ActorRuleV1::<EvalRoundV1, EvalStateV1, _>::new_from_player_state(&root.player_states[1]),
+        &mut ActorRuleV1::<EvalRoundV1, EvalStateV1, _>::new_from_player_state(&root.player_states[2]),
+        &mut ActorRuleV1::<EvalRoundV1, EvalStateV1, _>::new_from_player_state(&root.player_states[3]),
     ];
     game_info.play_without_validator(&mut actors, StopCondition::None);
     game_info.result().unwrap()

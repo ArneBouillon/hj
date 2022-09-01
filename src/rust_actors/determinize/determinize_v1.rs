@@ -27,8 +27,8 @@ impl DeterminizeV1 {
     }
 }
 
-impl<PS: DefaultPlayerStateInterface> Determinize<PS> for DeterminizeV1 {
-    fn determinize(pidx: usize, player_state: &PS, played_moves: &Vec<Move>) -> (GameInfo, [DefaultPlayerState; 4]) {
+impl Determinize for DeterminizeV1 {
+    fn determinize<PS: DefaultPlayerStateInterface>(pidx: usize, player_state: &PS, played_moves: &Vec<Move>) -> (GameInfo, [DefaultPlayerState; 4]) {
         let mut opponent_cards_in_game = player_state.cards_in_game().clone();
         for card in player_state.cards() { opponent_cards_in_game[card.suit().to_index()][card.rank().to_index()] = false; }
 

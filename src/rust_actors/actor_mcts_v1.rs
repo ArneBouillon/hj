@@ -14,8 +14,8 @@ mod mcts;
 mod mcts_mod;
 
 pub struct ActorMCTSV1<
-    D: Determinize<PS>,
-    ES: EvalState<PS>,
+    D: Determinize,
+    ES: EvalState,
     S: MediasResActor<DefaultPlayerState>,
     PS: ExtendedPlayerStateInterface
 > {
@@ -31,8 +31,8 @@ pub struct ActorMCTSV1<
 }
 
 impl<
-    D: Determinize<PS>,
-    ES: EvalState<PS>,
+    D: Determinize,
+    ES: EvalState,
     S: MediasResActor<DefaultPlayerState>,
     PS: ExtendedPlayerStateInterface
 > ActorMCTSV1<D, ES, S, PS> {
@@ -53,8 +53,8 @@ impl<
 }
 
 impl<
-    D: Determinize<PS>,
-    ES: EvalState<PS>,
+    D: Determinize,
+    ES: EvalState,
     S: MediasResActor<DefaultPlayerState>,
     PS: ExtendedPlayerStateInterface
 > ActorMCTSV1<D, ES, S, PS> {
@@ -125,8 +125,8 @@ impl<
 }
 
 impl<
-    D: Determinize<PS>,
-    ES: EvalState<PS>,
+    D: Determinize,
+    ES: EvalState,
     S: MediasResActor<DefaultPlayerState>,
     PS: ExtendedPlayerStateInterface
 > Actor for ActorMCTSV1<D, ES, S, PS> {

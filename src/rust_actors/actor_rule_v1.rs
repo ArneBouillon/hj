@@ -7,40 +7,44 @@ use std::marker::PhantomData;
 
 use itertools::Itertools;
 use itertools::FoldWhile::{Continue, Done};
+use crate::rust_actors::eval_round::EvalRound;
 use crate::rust_actors::eval_state::EvalState;
 use crate::rust_actors::player_state::{DefaultPlayerStateInterface, ExtendedPlayerStateInterface, MediasResActor};
 
-mod eval_round;
-
 pub struct ActorRuleV1<
-    ES: EvalState<PS>,
+    ER: EvalRound,
+    ES: EvalState,
     PS: ExtendedPlayerStateInterface
 > {
     dummy: Option<Card>,
     pub player_state: PS,
 
+    eval_round_type: PhantomData<ER>,
     eval_state_type: PhantomData<ES>,
 }
 
 impl<
-    ES: EvalState<PS>,
+    ER: EvalRound,
+    ES: EvalState,
     PS: ExtendedPlayerStateInterface
-> ActorRuleV1<ES, PS> {
+> ActorRuleV1<ER, ES, PS> {
     #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             dummy: None,
             player_state: Default::default(),
 
+            eval_round_type: PhantomData,
             eval_state_type: PhantomData,
         }
     }
 }
 
 impl<
-    ES: EvalState<PS>,
+    ER: EvalRound,
+    ES: EvalState,
     PS: ExtendedPlayerStateInterface
-> ActorRuleV1<ES, PS> {
+> ActorRuleV1<ER, ES, PS> {
     fn add_ghost_cards(cards: &[Vec<Card>; 4], spade_card: Card, club_card: Card, heart_card: Card) -> [Vec<Card>; 4] {
         [
             cards[0].clone().into_iter().chain([spade_card].iter().copied()).collect(),
@@ -108,9 +112,10 @@ impl<
 }
 
 impl<
-    ES: EvalState<PS>,
+    ER: EvalRound,
+    ES: EvalState,
     PS: ExtendedPlayerStateInterface
-> Actor for ActorRuleV1<ES, PS> {
+> Actor for ActorRuleV1<ER, ES, PS> {
     fn initialize(&mut self, pidx: usize, cards: &Vec<Card>) {
         self.player_state.set_pidx(pidx);
         self.player_state.set_cards(cards.clone());
@@ -151,7 +156,7 @@ impl<
             *possible_cards.iter().min_by_key(|c| {
                 let mut by_suit = [vec![], vec![], vec![], vec![]];
                 for card in self.player_state.cards() { if card != *c { by_suit[card.suit() as usize - 1].push(*card); } }
-                self.evaluate_round(played_moves, **c).try_add(ES::evaluate_state(&self.player_state, &by_suit)).unwrap()
+                ER::evaluate_round(&self.player_state, played_moves, **c).try_add(ES::evaluate_state(&self.player_state, &by_suit)).unwrap()
             }).expect("There should always be valid playing options")
         };
 
@@ -179,7 +184,7 @@ impl<
     }
 }
 
-impl<ES: EvalState<ExtendedPlayerState>, PS: DefaultPlayerStateInterface> MediasResActor<PS> for ActorRuleV1<ES, ExtendedPlayerState> {
+impl<ER: EvalRound, ES: EvalState, PS: DefaultPlayerStateInterface> MediasResActor<PS> for ActorRuleV1<ER, ES, ExtendedPlayerState> {
     fn new_from_player_state(player_state: &PS) -> Self {
         let cards_in_game_by_suit = player_state.cards_in_game().into_iter_fixed().map(|a| a.iter().filter(|b| **b).count()).collect();
         let mut opponent_cards_in_game = player_state.cards_in_game().clone();
@@ -190,6 +195,7 @@ impl<ES: EvalState<ExtendedPlayerState>, PS: DefaultPlayerStateInterface> Medias
             dummy: None,
             player_state: ExtendedPlayerState::new(player_state.cards().clone(), player_state.first_round(), player_state.hearts_played(), player_state.pidx(), player_state.cards_in_game().clone(), player_state.scores().clone(), player_state.scored().clone(), player_state.still_has().clone(), cards_in_game_by_suit, opponent_cards_in_game, opponent_cards_in_game_by_suit),
 
+            eval_round_type: PhantomData,
             eval_state_type: PhantomData,
         }
     }

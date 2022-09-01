@@ -124,7 +124,7 @@ fn mcts_rec<S: MediasResActor<DefaultPlayerState>>(root: &mut Node, game_info: &
 }
 
 pub fn mcts_mod<
-    D: Determinize<PS>,
+    D: Determinize,
     S: MediasResActor<DefaultPlayerState>,
     PS: DefaultPlayerStateInterface
 >(pidx: usize, player_state: &PS, played_moves: &Vec<Move>, time: usize) -> Vec<(Card, f32, usize)> {

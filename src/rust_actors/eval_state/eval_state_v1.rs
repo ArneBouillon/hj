@@ -165,10 +165,10 @@ impl EvalStateV1 {
     }
 }
 
-impl<
-    PS: DefaultPlayerStateInterface
-> EvalState<PS> for EvalStateV1 {
-    fn evaluate_state(player_state: &PS, by_suit: &[Vec<Card>; 4]) -> NonNan {
+impl EvalState for EvalStateV1 {
+    fn evaluate_state<
+        PS: DefaultPlayerStateInterface
+    >(player_state: &PS, by_suit: &[Vec<Card>; 4]) -> NonNan {
         let suit_results = [
             Self::eval_state_spades(player_state, &by_suit[0]),
             Self::eval_state_clubs(player_state, &by_suit[1]),
