@@ -1,5 +1,5 @@
 use iter_fixed::IntoIteratorFixed;
-use crate::{ExtendedPlayerState, PassDirection};
+use crate::{EvalRoundV1, EvalStateV1, ExtendedPlayerState, PassDirection};
 use crate::game::actor::Actor;
 use crate::game::data::{Card, Move, Rank, Suit};
 use crate::util::non_nan::NonNan;
@@ -28,8 +28,7 @@ impl<
     ES: EvalState,
     PS: ExtendedPlayerStateInterface
 > ActorRuleV1<ER, ES, PS> {
-    #[allow(dead_code)]
-    pub fn new() -> Self {
+    pub fn customize() -> Self {
         Self {
             dummy: None,
             player_state: Default::default(),
@@ -37,6 +36,13 @@ impl<
             eval_round_type: PhantomData,
             eval_state_type: PhantomData,
         }
+    }
+}
+
+impl ActorRuleV1<EvalRoundV1, EvalStateV1, ExtendedPlayerState> {
+    #[allow(dead_code)]
+    pub fn new() -> Self {
+        Self::customize()
     }
 }
 

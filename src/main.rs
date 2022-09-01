@@ -34,9 +34,9 @@ fn main() {
                     hands,
                     PassDirection::from_round(round_num),
                     [
-                        &mut ActorMCTSModV1::<DeterminizeV1, EvalStateV1, ActorRuleV1<EvalRoundV1, EvalStateV1, ExtendedPlayerState>, ExtendedPlayerState>::new(50),
-                        &mut ActorRandom::<BasicPlayerState>::new(),
-                        &mut ActorRandom::<BasicPlayerState>::new(),
+                        &mut ActorMCTSModV1::new(50),
+                        &mut ActorRuleV1::new(),
+                        &mut ActorRandom::new(),
                         &mut JSONActor::new("/home/arne/repos/hj/src/json_actors/random_actor.py".to_owned()),
                     ],
                 ).expect("Errors should not occur.")

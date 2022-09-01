@@ -5,19 +5,22 @@ use crate::game::data::{Card, Move, Rank, Suit};
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use crate::PassDirection;
+use crate::{BasicPlayerState, PassDirection};
 use crate::rust_actors::player_state::{BasicPlayerStateInterface, MediasResActor};
 
 pub struct ActorRandom<PlayerState: BasicPlayerStateInterface> {
     pub player_state: PlayerState,
 }
 
-
 impl<PlayerState: BasicPlayerStateInterface> ActorRandom<PlayerState> {
-    #[allow(dead_code)]
-    pub fn new() -> Self {
+    pub fn customize() -> Self {
         Self { player_state: Default::default() }
     }
+}
+
+impl ActorRandom<BasicPlayerState> {
+    #[allow(dead_code)]
+    pub fn new() -> Self { Self::customize() }
 }
 
 impl<PlayerState: BasicPlayerStateInterface> Actor for ActorRandom<PlayerState> {

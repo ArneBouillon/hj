@@ -1,4 +1,4 @@
-use crate::{Card, DefaultPlayerState, PassDirection, Rank, Suit};
+use crate::{ActorRuleV1, Card, DefaultPlayerState, DeterminizeV1, EvalRoundV1, EvalStateV1, ExtendedPlayerState, PassDirection, Rank, Suit};
 use crate::game::actor::Actor;
 use crate::game::data::Move;
 use crate::util::non_nan::NonNan;
@@ -34,7 +34,7 @@ impl<
     PS: ExtendedPlayerStateInterface
 > ActorMCTSModV1<D, ES, S, PS> {
     #[allow(dead_code)]
-    pub fn new(timeout: usize) -> Self {
+    pub fn customize(timeout: usize) -> Self {
         Self {
             player_state: Default::default(),
 
@@ -44,6 +44,13 @@ impl<
             eval_state_type: PhantomData,
             sub_actor_type: PhantomData,
         }
+    }
+}
+
+impl ActorMCTSModV1<DeterminizeV1, EvalStateV1, ActorRuleV1<EvalRoundV1, EvalStateV1, ExtendedPlayerState>, ExtendedPlayerState> {
+    #[allow(dead_code)]
+    pub fn new(timeout: usize) -> Self {
+        Self::customize(timeout)
     }
 }
 
