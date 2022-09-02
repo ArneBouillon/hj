@@ -18,11 +18,11 @@ pub struct Hand {
     cards: Vec<Card>,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Card(pub Rank, pub Suit);
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, FromPrimitive, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, FromPrimitive, Hash)]
 pub enum Rank {
     Two = 2,
     Three = 3,
@@ -40,7 +40,7 @@ pub enum Rank {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, FromPrimitive, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, FromPrimitive, Hash)]
 pub enum Suit {
     Spades = 1,
     Clubs = 2,
@@ -143,6 +143,14 @@ impl Card {
     }
 }
 
+impl std::fmt::Debug for Card {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        write!(f, "{:?}{:?}", self.suit(), self.rank())?;
+
+        Ok(())
+    }
+}
+
 impl Rank {
     pub fn all() -> [Rank; 13] {
         [
@@ -160,6 +168,28 @@ impl Rank {
     }
 }
 
+impl std::fmt::Debug for Rank {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        write!(f, "{}", match self {
+            Self::Two => "2",
+            Self::Three => "3",
+            Self::Four => "4",
+            Self::Five => "5",
+            Self::Six => "6",
+            Self::Seven => "7",
+            Self::Eight => "8",
+            Self::Nine => "9",
+            Self::Ten => "10",
+            Self::Jack => "J",
+            Self::Queen => "Q",
+            Self::King => "K",
+            Self::Ace => "A",
+        })?;
+
+        Ok(())
+    }
+}
+
 impl Suit {
     pub fn all() -> [Suit; 4] {
         [Suit::Spades, Suit::Clubs, Suit::Diamonds, Suit::Hearts]
@@ -167,5 +197,18 @@ impl Suit {
 
     pub fn to_index(&self) -> usize {
         *self as usize - 1
+    }
+}
+
+impl std::fmt::Debug for Suit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        write!(f, "{}", match self {
+            Self::Spades => "♠",
+            Self::Clubs => "♣",
+            Self::Diamonds => "♢",
+            Self::Hearts => "♡",
+        })?;
+
+        Ok(())
     }
 }
